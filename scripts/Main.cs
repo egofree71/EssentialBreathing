@@ -198,7 +198,7 @@ public partial class Main : Control
         _completionLabel = new Label
         {
             Name = "CompletionLabel",
-            Text = "Session terminée",
+            Text = AppLocalization.Translate(AppLocalization.SessionCompleted),
             HorizontalAlignment = Godot.HorizontalAlignment.Center,
             VerticalAlignment = Godot.VerticalAlignment.Center,
             MouseFilter = MouseFilterEnum.Ignore
@@ -479,7 +479,7 @@ public partial class Main : Control
 
         var title = new Label
         {
-            Text = "Réglages",
+            Text = AppLocalization.Translate(AppLocalization.SettingsTitle),
             VerticalAlignment = Godot.VerticalAlignment.Center,
             SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
@@ -488,17 +488,17 @@ public partial class Main : Control
 
         column.AddChild(CreateVerticalSpacer(10));
 
-        var breathingTitle = CreateSectionTitle("Respiration");
+        var breathingTitle = CreateSectionTitle(AppLocalization.Translate(AppLocalization.BreathingSection));
         column.AddChild(breathingTitle);
 
         column.AddChild(CreateDurationRow(
-            "Inspiration",
+            AppLocalization.Translate(AppLocalization.Inhale),
             out _inhaleValueLabel,
             () => AdjustInhaleDuration(-BreathingSettings.DurationStep),
             () => AdjustInhaleDuration(BreathingSettings.DurationStep)));
 
         column.AddChild(CreateDurationRow(
-            "Expiration",
+            AppLocalization.Translate(AppLocalization.Exhale),
             out _exhaleValueLabel,
             () => AdjustExhaleDuration(-BreathingSettings.DurationStep),
             () => AdjustExhaleDuration(BreathingSettings.DurationStep)));
@@ -507,7 +507,7 @@ public partial class Main : Control
 
         column.AddChild(CreateVerticalSpacer(10));
 
-        var colorsTitle = CreateSectionTitle("Thèmes");
+        var colorsTitle = CreateSectionTitle(AppLocalization.Translate(AppLocalization.ThemesSection));
         column.AddChild(colorsTitle);
         column.AddChild(CreateThemeRow());
 
@@ -606,7 +606,7 @@ public partial class Main : Control
 
         var label = new Label
         {
-            Text = "Durée de séance",
+            Text = AppLocalization.Translate(AppLocalization.SessionDuration),
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             VerticalAlignment = Godot.VerticalAlignment.Center
         };
@@ -1227,6 +1227,11 @@ public partial class Main : Control
     /// </summary>
     private void UpdateTexts()
     {
+        if (_completionLabel != null)
+        {
+            _completionLabel.Text = AppLocalization.Translate(AppLocalization.SessionCompleted);
+        }
+
         if (_inhaleValueLabel != null)
         {
             _inhaleValueLabel.Text = $"{_draftInhaleDuration:0.0}s";
@@ -1239,7 +1244,7 @@ public partial class Main : Control
 
         if (_sessionDurationValueLabel != null)
         {
-            _sessionDurationValueLabel.Text = $"{_draftSessionDurationMinutes} min";
+            _sessionDurationValueLabel.Text = AppLocalization.FormatSessionDurationMinutes(_draftSessionDurationMinutes);
         }
 
         if (_sessionDurationSlider != null &&
@@ -1252,7 +1257,7 @@ public partial class Main : Control
 
         if (_themeLabel != null)
         {
-            _themeLabel.Text = BreathingSettings.Themes[_draftThemeIndex].Name;
+            _themeLabel.Text = AppLocalization.Translate(BreathingSettings.Themes[_draftThemeIndex].NameKey);
         }
 
         UpdatePauseProgressDisplay();

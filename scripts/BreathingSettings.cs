@@ -38,7 +38,7 @@ public sealed class BreathingSettings
     public static readonly BreathingTheme[] Themes =
     {
         new(
-            "Océan",
+            AppLocalization.ThemeOcean,
             new Color(0.00f, 0.07f, 0.18f),
             new Color(0.86f, 0.96f, 1.00f),
             new Color(0.00f, 0.24f, 0.48f),
@@ -46,7 +46,7 @@ public sealed class BreathingSettings
             new Color(0.00f, 0.78f, 1.00f)),
 
         new(
-            "Jungle",
+            AppLocalization.ThemeJungle,
             // Inspired by the Color Hex palette 24608:
             // #63FF00, #00DD3B, #06B400, #008D02, #066916.
             new Color(0.02f, 0.41f, 0.09f),
@@ -56,7 +56,7 @@ public sealed class BreathingSettings
             new Color(0.39f, 1.00f, 0.00f)),
 
         new(
-            "Volcan",
+            AppLocalization.ThemeVolcano,
             // Inspired by the lava palette:
             // #370617, #6A040F, #9D0208, #D00000, #DC2F02, #E85D04, #F48C06, #FAA307, #FFBA08.
             new Color(0.22f, 0.02f, 0.09f),
@@ -66,7 +66,7 @@ public sealed class BreathingSettings
             new Color(1.00f, 0.73f, 0.03f)),
 
         new(
-            "Ciel",
+            AppLocalization.ThemeSky,
             new Color(0.78f, 0.92f, 1.00f),
             new Color(0.04f, 0.16f, 0.32f),
             new Color(0.96f, 0.99f, 1.00f),
@@ -79,7 +79,7 @@ public sealed class BreathingSettings
         ApplyTheme(0);
     }
 
-    public string CurrentThemeName => Themes[CurrentThemeIndex].Name;
+    public string CurrentThemeNameKey => Themes[CurrentThemeIndex].NameKey;
 
     public void MoveToNextTheme()
     {
@@ -128,19 +128,19 @@ public sealed class BreathingSettings
 }
 
 /// <summary>
-/// Immutable color palette used by the breathing UI.
+/// Immutable color palette used by the breathing UI. The name is stored as a localization key.
 /// </summary>
 public sealed class BreathingTheme
 {
     public BreathingTheme(
-        string name,
+        string nameKey,
         Color backgroundColor,
         Color textColor,
         Color gaugeColor,
         Color gaugeBorderColor,
         Color ballColor)
     {
-        Name = name;
+        NameKey = nameKey;
         BackgroundColor = backgroundColor;
         TextColor = textColor;
         GaugeColor = gaugeColor;
@@ -148,7 +148,7 @@ public sealed class BreathingTheme
         BallColor = ballColor;
     }
 
-    public string Name { get; }
+    public string NameKey { get; }
     public Color BackgroundColor { get; }
     public Color TextColor { get; }
     public Color GaugeColor { get; }
