@@ -13,7 +13,8 @@ The current design goal is to keep the mobile interface calm and minimal:
 - controls disappear during the breathing session;
 - the breathing movement should feel smooth and natural rather than mechanical;
 - the gauge should feel visually centered and stable;
-- settings changes should not affect the main screen until explicitly saved.
+- settings changes should be simple and immediate, without a separate save step;
+- labels should adapt to the user's language when possible.
 
 ## Project structure
 
@@ -25,7 +26,7 @@ SimpleBreathing/
 ├── README.md
 ├── assets/
 │   └── icons/
-│       └── floppy-disk.svg
+│       └── floppy-disk.svg          # legacy unused asset, safe to remove later
 ├── scenes/
 │   └── Main.tscn
 ├── scripts/
@@ -33,10 +34,13 @@ SimpleBreathing/
 │   ├── BreathingGauge.cs
 │   ├── BreathingSettings.cs
 │   ├── SettingsStorage.cs
-│   └── FloppyIcon.cs
+│   ├── AppLocalization.cs
+│   └── FloppyIcon.cs                # legacy unused script, safe to remove later
 └── docs/
     └── current_implementation.md
 ```
+
+`FloppyIcon.cs` and `assets/icons/floppy-disk.svg` are no longer used by the current UI because the settings screen now auto-saves every change and no longer displays a save button. They may still exist in the repository until a cleanup commit removes them.
 
 ## Project configuration
 
@@ -104,28 +108,31 @@ Responsibilities:
 - create the main breathing screen;
 - create the settings screen;
 - manage screen switching;
-- manage settings draft values;
-- apply settings only when the user saves;
-- persist saved settings through `user://settings.cfg`;
+- load persisted settings at startup;
+- apply and save settings immediately when the user changes them;
+- persist settings through `user://settings.cfg`;
 - manage the breathing session state;
 - manage the inhalation/exhalation cycle;
 - manage total session duration;
 - update the pause progress display;
 - show the completion fade overlay when a session ends naturally;
 - apply color themes to the main screen;
-- keep the settings screen readable with a neutral black-and-white style.
+- keep the settings screen readable with a neutral black-and-white style;
+- use localized labels through `AppLocalization`.
 
-The controller methods are now documented with XML comments. Short inline comments are also used for non-trivial layout and state-management details.
+The controller methods are documented with XML comments. Short inline comments are also used for non-trivial layout and state-management details.
 
 ### Important runtime state
 
-`Main.cs` keeps two categories of settings:
+`Main.cs` keeps the active settings in:
 
 ```text
 _settings
 ```
 
-Active settings used by the main breathing screen and the running session.
+These settings are used by the main breathing screen and the running session.
+
+The settings screen currently uses working values:
 
 ```text
 _draftInhaleDuration
@@ -134,17 +141,20 @@ _draftSessionDurationMinutes
 _draftThemeIndex
 ```
 
-Draft settings edited on the settings screen.
+Although these variables still use the word `draft`, they are now applied immediately after each user change. The old explicit save/cancel behavior has been removed.
 
-The draft values are copied to `_settings` only when the user presses the save icon.
+When the user changes a setting, `Main.cs`:
 
-When the save icon is pressed, the active settings are also written to:
+1. updates the working value;
+2. copies it into `_settings`;
+3. writes `_settings` to `user://settings.cfg`;
+4. refreshes the UI.
+
+This creates the current mobile-friendly behavior:
 
 ```text
-user://settings.cfg
+change a setting -> apply it immediately -> save it immediately
 ```
-
-This avoids a confusing behavior where pressing the back arrow after editing settings still changed the main screen.
 
 ## Main screen
 
@@ -258,7 +268,7 @@ When the configured session duration is reached:
 - the session stops automatically;
 - a full-screen overlay fades the current view to black;
 - the app resets the session while the screen is black;
-- the text `Session terminée` fades in;
+- a localized completion message fades in;
 - the message stays visible for about 2 seconds;
 - the overlay fades out;
 - the app returns to the initial main screen.
@@ -277,23 +287,30 @@ CompletionFade
 CompletionLabel
 ```
 
-The label text is:
+The label text is localized through:
+
+```csharp
+AppLocalization.SessionCompleted
+```
+
+Current translations:
 
 ```text
-Session terminée
+English : Session completed
+French  : Session terminée
+Spanish : Sesión terminada
 ```
 
 Animation sequence:
 
 ```text
-fade to black       : about 0.45 s
-text fade in        : about 0.35 s
-message hold        : 2.0 s
+fade to black        : about 0.45 s
+text fade in         : about 0.35 s
+message hold         : 2.0 s
 text + black fade out: about 0.45 s
 ```
 
 The app resets the session while the screen is black, so the user does not see an abrupt jump.
-
 
 ## Settings screen
 
@@ -304,12 +321,11 @@ It uses a fixed neutral style:
 - black background;
 - white text;
 - white button borders;
-- very dark button fill;
-- white SVG save icon.
+- very dark button fill.
 
 The settings screen does not preview the selected theme colors directly. This is intentional: some themes made buttons hard to read when the settings screen used theme colors.
 
-Current layout:
+Current French layout example:
 
 ```text
 [←] Réglages
@@ -324,17 +340,18 @@ Durée de séance     5 min
 Thèmes
 
 [‹]  Océan  [›]
-
-[save icon]
 ```
+
+There is no longer a save button. The old floppy-disk button was removed because immediate auto-save is simpler and more natural for this small mobile app.
 
 ### Settings editing model
 
-The settings screen uses a draft model:
+The settings screen uses immediate application and immediate persistence:
 
-- changing a value updates only the draft state;
-- pressing `←` cancels the draft changes and returns to the main screen;
-- pressing the save icon applies the draft changes to the active settings and returns to the main screen.
+- changing a value applies it to the active settings;
+- changing a value writes it to `user://settings.cfg`;
+- pressing `←` simply returns to the main screen;
+- there is no cancel behavior anymore.
 
 Affected values:
 
@@ -394,31 +411,7 @@ The theme selection buttons use:
 
 The selected theme name is displayed between the buttons.
 
-The theme change is applied to the main screen only after pressing the save icon.
-
-### Save button
-
-The save button uses an SVG floppy disk icon:
-
-```text
-assets/icons/floppy-disk.svg
-```
-
-It is displayed through:
-
-```text
-scripts/FloppyIcon.cs
-```
-
-Important: settings are applied and persisted only when the save button is pressed.
-
-The save button:
-
-- copies draft values to the active settings;
-- writes the active settings to `user://settings.cfg`;
-- returns to the main screen.
-
-If the user presses `←`, draft changes are discarded and no file is written.
+The theme change is now applied to the main screen and saved immediately.
 
 ## Breathing session and cycle
 
@@ -447,7 +440,7 @@ When:
 _sessionElapsed >= SessionDurationSeconds
 ```
 
-The app calls `StopBreathingSession()`.
+The app calls the completion flow, which fades to black, shows the completion message, resets the session, and returns to the start screen.
 
 ### Breathing cycle
 
@@ -565,7 +558,7 @@ The progress value is clamped between `0.0` and `1.0`.
 
 ## `scripts/BreathingSettings.cs`
 
-Contains breathing parameters and color themes. Values are kept in memory during runtime and persisted by `SettingsStorage` when the user saves settings.
+Contains breathing parameters and color themes. Values are kept in memory during runtime and persisted by `SettingsStorage` whenever the user changes a setting.
 
 ### Inhalation and exhalation durations
 
@@ -630,13 +623,21 @@ ClampSessionDurationMinutes(int value)
 
 ### Themes
 
-Current themes:
+Current theme keys:
 
 ```text
-Océan
-Jungle
-Volcan
-Ciel
+ThemeOcean
+ThemeJungle
+ThemeVolcano
+ThemeSky
+```
+
+Localized names:
+
+```text
+English : Ocean, Jungle, Volcano, Sky
+French  : Océan, Jungle, Volcan, Ciel
+Spanish : Océano, Jungla, Volcán, Cielo
 ```
 
 Each theme defines:
@@ -651,10 +652,10 @@ Note: `GaugeBorderColor` still exists in the theme data, but the gauge no longer
 
 ### Theme notes
 
-- `Océan` is a saturated blue theme.
-- `Jungle` is based on bright green jungle-like colors.
-- `Volcan` is based on dark red, lava orange, and yellow colors.
-- `Ciel` uses light sky-like colors, including light blue and white.
+- Ocean is a saturated blue theme.
+- Jungle is based on bright green jungle-like colors.
+- Volcano is based on dark red, lava orange, and yellow colors.
+- Sky uses light sky-like colors, including light blue and white.
 
 ## `scripts/SettingsStorage.cs`
 
@@ -688,44 +689,76 @@ Loading behavior:
 
 Saving behavior:
 
-- called only from `SaveSettings()` after the user presses the save icon;
-- canceled draft changes are not saved.
+- called after each settings change;
+- writes the current active settings to `user://settings.cfg`;
+- does not require Android external storage permissions.
 
-## `scripts/FloppyIcon.cs`
+## `scripts/AppLocalization.cs`
 
-Custom `Control` used inside the settings save button.
+Small code-based localization helper.
+
+The current app has only a few labels, so translations are currently stored in code rather than in a Godot CSV translation resource.
 
 Responsibilities:
 
-- load the SVG texture;
-- draw it inside the button;
-- tint it with `IconColor`;
-- provide a simple fallback drawing if the SVG is not imported yet.
+- detect the current locale from Godot;
+- choose a supported language;
+- provide fallback to English;
+- translate UI labels and theme names;
+- format the session duration label.
 
-The icon path is:
-
-```csharp
-private const string IconPath = "res://assets/icons/floppy-disk.svg";
-```
-
-The SVG was sourced from SVG Repo and was marked as public domain / CC0 on the source site.
-
-The SVG fill is stored as white so it can be tinted clearly at draw time.
-
-## Assets
-
-### `assets/icons/floppy-disk.svg`
-
-Save icon used in the settings screen.
-
-License note:
+Supported languages:
 
 ```text
-Source: SVG Repo
-License: Public Domain / CC0 1.0 Universal
+en : English
+fr : French
+es : Spanish
 ```
 
-This is kept here as a practical trace for future publishing or maintenance.
+Current translated labels include:
+
+```text
+Settings
+Breathing
+Inhale
+Exhale
+Session duration
+Themes
+Session completed
+Ocean
+Jungle
+Volcano
+Sky
+```
+
+If the device language is not supported, the app falls back to English.
+
+## Localization behavior
+
+The language is selected automatically from the current OS/Godot locale.
+
+On Android, this should follow the phone language or app language environment. This still needs to be tested on a real Android phone.
+
+The UI is not currently offering an in-app language selector. The app chooses the language automatically.
+
+Potential future improvement:
+
+- move translations from `AppLocalization.cs` to a Godot CSV translation resource if the number of labels grows.
+
+## Legacy unused files
+
+The current UI no longer uses the old save icon system.
+
+These files may still exist until a cleanup commit removes them:
+
+```text
+scripts/FloppyIcon.cs
+assets/icons/floppy-disk.svg
+```
+
+They were used for the previous explicit save button, but the settings screen now auto-saves immediately after every change.
+
+If removed later, also remove related project imports generated by Godot if they appear in the repository.
 
 ## Current validated state
 
@@ -755,12 +788,12 @@ Implemented and validated:
 - editable inhalation/exhalation durations;
 - editable total session duration with a whole-minute slider;
 - theme switching;
-- settings draft/cancel/save behavior;
-- settings persistence in `user://settings.cfg`;
+- immediate settings application;
+- immediate settings persistence in `user://settings.cfg`;
+- basic localization in English, French, and Spanish;
 - themes renamed and recolored;
 - neutral black-and-white settings screen;
 - larger settings text and button symbols;
-- SVG save icon;
 - XML comments added to `Main.cs` methods;
 - implementation documentation.
 
@@ -787,10 +820,6 @@ rmdir /s /q .godot\mono
 
 Then reopen the project in Godot, build it, and run it again.
 
-### SVG import
-
-If the save icon does not appear after copying the package, close and reopen the Godot project so the SVG asset can be imported.
-
 ### Settings persistence
 
 Settings are stored in:
@@ -804,16 +833,44 @@ On Android, this is app-specific private storage. The app should keep the settin
 For testing:
 
 1. change a setting;
-2. press the save icon;
+2. verify that the main screen updates immediately;
 3. close the app completely;
 4. reopen it;
 5. verify that the saved values are restored.
+
+### Localization
+
+Localization currently uses `AppLocalization.cs`.
+
+For testing:
+
+1. set the phone language to French;
+2. open the app and verify French labels;
+3. set the phone language to English;
+4. reopen the app and verify English labels;
+5. set the phone language to Spanish;
+6. reopen the app and verify Spanish labels.
+
+Watch for longer labels on small screens, especially in Spanish.
+
+### Legacy save icon cleanup
+
+The old save icon files may still be present but are no longer used.
+
+Suggested cleanup command when convenient:
+
+```bash
+git rm scripts/FloppyIcon.cs assets/icons/floppy-disk.svg
+```
+
+Only do this if the files are not referenced anywhere else.
 
 ## Later improvements
 
 Possible next steps:
 
 - test settings persistence on a real Android phone;
+- test localization on a real Android phone;
 - test button sizes on a real Android phone;
 - test the breathing rhythm on an actual phone screen;
 - prepare Android export;

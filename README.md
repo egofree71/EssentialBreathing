@@ -31,12 +31,12 @@ Implemented:
 - start, pause, resume, stop, and soft automatic session completion flow;
 - pause progress display above the gauge;
 - separate settings screen;
-- deferred settings editing: changes are applied only when pressing the save icon;
+- immediate settings application and auto-save;
 - settings persistence through Godot `user://settings.cfg`;
 - selectable visual themes;
 - neutral black-and-white settings screen for readability;
-- SVG save icon in the settings screen;
-- completion overlay with fade out / fade in and “Session terminée” message;
+- basic localization in English, French, and Spanish;
+- completion overlay with fade out / fade in and localized completion message;
 - documented `Main.cs` controller methods.
 
 ## Technical documentation
