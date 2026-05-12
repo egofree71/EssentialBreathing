@@ -218,6 +218,9 @@ public partial class Main : Control
         return root;
     }
 
+    /// <summary>
+    /// Creates the small overlay row that holds the top-left settings button.
+    /// </summary>
     private Control BuildTopActionRow()
     {
         var row = new HBoxContainer
@@ -241,6 +244,13 @@ public partial class Main : Control
         return row;
     }
 
+    /// <summary>
+    /// Creates the reserved pause display area above the gauge.
+    /// </summary>
+    /// <remarks>
+    /// The area keeps a fixed height even when hidden, so showing the elapsed-time
+    /// text and progress bar during pause does not move the gauge.
+    /// </remarks>
     private Control BuildPauseProgressArea()
     {
         var area = new Control
@@ -318,6 +328,9 @@ public partial class Main : Control
         return area;
     }
 
+    /// <summary>
+    /// Creates the fixed bottom area containing the start/resume and stop buttons.
+    /// </summary>
     private Control BuildBottomControls()
     {
         var controls = new Control
@@ -450,6 +463,9 @@ public partial class Main : Control
         return root;
     }
 
+    /// <summary>
+    /// Creates a section title label for the settings screen.
+    /// </summary>
     private Label CreateSectionTitle(string text)
     {
         var label = new Label
@@ -500,6 +516,9 @@ public partial class Main : Control
         return row;
     }
 
+    /// <summary>
+    /// Creates the session-duration slider, restricted to whole-minute values.
+    /// </summary>
     private VBoxContainer CreateSessionDurationSlider()
     {
         var container = new VBoxContainer
@@ -552,6 +571,9 @@ public partial class Main : Control
         return container;
     }
 
+    /// <summary>
+    /// Creates the theme selector row with previous/next buttons and the draft theme name.
+    /// </summary>
     private HBoxContainer CreateThemeRow()
     {
         var row = new HBoxContainer
@@ -580,6 +602,13 @@ public partial class Main : Control
         return row;
     }
 
+    /// <summary>
+    /// Creates a simple default button.
+    /// </summary>
+    /// <remarks>
+    /// Kept as a generic helper for future non-styled buttons. Most current buttons
+    /// use more specialized helpers below.
+    /// </remarks>
     private Button CreateButton(string text, Action onPressed)
     {
         var button = new Button
@@ -591,6 +620,9 @@ public partial class Main : Control
         return button;
     }
 
+    /// <summary>
+    /// Creates a themed icon-like button used on the main screen.
+    /// </summary>
     private Button CreateIconButton(string text, Action onPressed, int fontSize = 28)
     {
         var button = new Button
@@ -603,6 +635,9 @@ public partial class Main : Control
         return button;
     }
 
+    /// <summary>
+    /// Creates the large start/resume/stop buttons used during a breathing session.
+    /// </summary>
     private Button CreateSessionIconButton(string text, Action onPressed, int fontSize)
     {
         var button = new Button
@@ -615,6 +650,9 @@ public partial class Main : Control
         return button;
     }
 
+    /// <summary>
+    /// Creates a black-and-white text button for the settings screen.
+    /// </summary>
     private Button CreateSettingsButton(string text, Action onPressed)
     {
         var button = new Button
@@ -628,6 +666,9 @@ public partial class Main : Control
         return button;
     }
 
+    /// <summary>
+    /// Creates a black-and-white icon button for the settings header.
+    /// </summary>
     private Button CreateSettingsIconButton(string text, Action onPressed, int fontSize = 28)
     {
         var button = new Button
@@ -641,6 +682,9 @@ public partial class Main : Control
         return button;
     }
 
+    /// <summary>
+    /// Creates the settings save button and places the SVG floppy icon inside it.
+    /// </summary>
     private Button CreateSettingsSaveButton(Action onPressed)
     {
         var button = new Button
@@ -664,6 +708,9 @@ public partial class Main : Control
         return button;
     }
 
+    /// <summary>
+    /// Applies the neutral black-and-white button style used by the settings screen.
+    /// </summary>
     private static void ApplySettingsButtonStyle(Button button)
     {
         button.AddThemeColorOverride("font_color", Colors.White);
@@ -678,6 +725,9 @@ public partial class Main : Control
         button.AddThemeStyleboxOverride("disabled", CreateSettingsButtonStyleBox(new Color(0.04f, 0.04f, 0.04f)));
     }
 
+    /// <summary>
+    /// Creates one StyleBoxFlat variant for settings buttons.
+    /// </summary>
     private static StyleBoxFlat CreateSettingsButtonStyleBox(Color fillColor)
     {
         var style = new StyleBoxFlat
@@ -701,6 +751,13 @@ public partial class Main : Control
         return style;
     }
 
+    /// <summary>
+    /// Positions a control around the horizontal center of its parent.
+    /// </summary>
+    /// <remarks>
+    /// This is used for the bottom session buttons so the resume button stays
+    /// centered even when the stop button appears to its left.
+    /// </remarks>
     private static void PositionControl(Control control, float left, float top, float right, float bottom)
     {
         control.AnchorLeft = 0.5f;
@@ -713,6 +770,9 @@ public partial class Main : Control
         control.OffsetBottom = bottom;
     }
 
+    /// <summary>
+    /// Anchors a child control to fill its parent while keeping custom insets.
+    /// </summary>
     private static void InsetControl(Control control, float left, float top, float right, float bottom)
     {
         control.AnchorLeft = 0.0f;
@@ -725,6 +785,9 @@ public partial class Main : Control
         control.OffsetBottom = -bottom;
     }
 
+    /// <summary>
+    /// Creates a fixed-height spacer for code-built layouts.
+    /// </summary>
     private Control CreateVerticalSpacer(float height)
     {
         return new Control
@@ -733,18 +796,27 @@ public partial class Main : Control
         };
     }
 
+    /// <summary>
+    /// Updates the draft inhalation duration without applying it to the active settings yet.
+    /// </summary>
     private void AdjustInhaleDuration(double delta)
     {
         _draftInhaleDuration = BreathingSettings.ClampDuration(_draftInhaleDuration + delta);
         UpdateTexts();
     }
 
+    /// <summary>
+    /// Updates the draft exhalation duration without applying it to the active settings yet.
+    /// </summary>
     private void AdjustExhaleDuration(double delta)
     {
         _draftExhaleDuration = BreathingSettings.ClampDuration(_draftExhaleDuration + delta);
         UpdateTexts();
     }
 
+    /// <summary>
+    /// Updates the draft session duration when the whole-minute slider changes.
+    /// </summary>
     private void OnSessionDurationSliderValueChanged(double value)
     {
         if (_isUpdatingSettingsControls)
@@ -765,18 +837,31 @@ public partial class Main : Control
         UpdateTexts();
     }
 
+    /// <summary>
+    /// Selects the previous draft theme without applying it to the main screen yet.
+    /// </summary>
     private void SelectPreviousTheme()
     {
         _draftThemeIndex = WrapThemeIndex(_draftThemeIndex - 1);
         UpdateTexts();
     }
 
+    /// <summary>
+    /// Selects the next draft theme without applying it to the main screen yet.
+    /// </summary>
     private void SelectNextTheme()
     {
         _draftThemeIndex = WrapThemeIndex(_draftThemeIndex + 1);
         UpdateTexts();
     }
 
+    /// <summary>
+    /// Applies all draft settings and returns to the main screen.
+    /// </summary>
+    /// <remarks>
+    /// Timing changes reset the current session progress so the breathing cycle and
+    /// session progress bar start from a coherent state.
+    /// </remarks>
     private void SaveSettings()
     {
         bool timingChanged =
@@ -798,12 +883,18 @@ public partial class Main : Control
         ShowMainScreen();
     }
 
+    /// <summary>
+    /// Discards draft setting changes and returns to the main screen.
+    /// </summary>
     private void CancelSettings()
     {
         ResetDraftSettingsFromCurrent();
         ShowMainScreen();
     }
 
+    /// <summary>
+    /// Copies active settings into the draft values shown on the settings screen.
+    /// </summary>
     private void ResetDraftSettingsFromCurrent()
     {
         _draftInhaleDuration = _settings.InhaleDuration;
@@ -812,6 +903,9 @@ public partial class Main : Control
         _draftThemeIndex = _settings.CurrentThemeIndex;
     }
 
+    /// <summary>
+    /// Wraps a theme index so previous/next navigation loops through the theme list.
+    /// </summary>
     private static int WrapThemeIndex(int value)
     {
         int length = BreathingSettings.Themes.Length;
@@ -824,6 +918,9 @@ public partial class Main : Control
         return result < 0 ? result + length : result;
     }
 
+    /// <summary>
+    /// Starts a new breathing session or resumes an existing paused one.
+    /// </summary>
     private void StartOrResumeBreathingSession()
     {
         if (!_hasSessionStarted)
@@ -837,6 +934,9 @@ public partial class Main : Control
         UpdateTexts();
     }
 
+    /// <summary>
+    /// Pauses a running session and reveals the pause controls.
+    /// </summary>
     private void PauseBreathingSession()
     {
         if (!_hasSessionStarted || !_isRunning)
@@ -849,6 +949,9 @@ public partial class Main : Control
         UpdateTexts();
     }
 
+    /// <summary>
+    /// Stops the current session and returns the main screen to its initial state.
+    /// </summary>
     private void StopBreathingSession()
     {
         _hasSessionStarted = false;
@@ -858,6 +961,9 @@ public partial class Main : Control
         UpdateTexts();
     }
 
+    /// <summary>
+    /// Opens the settings screen and initializes draft values from the active settings.
+    /// </summary>
     private void ShowSettingsScreen()
     {
         // Settings are currently available only before a breathing session starts.
@@ -873,6 +979,9 @@ public partial class Main : Control
         _settingsScreen.Visible = true;
     }
 
+    /// <summary>
+    /// Returns from settings to the main breathing screen.
+    /// </summary>
     private void ShowMainScreen()
     {
         _settingsScreen.Visible = false;
@@ -881,12 +990,18 @@ public partial class Main : Control
         UpdateTexts();
     }
 
+    /// <summary>
+    /// Resets both the total session timer and the current breathing cycle.
+    /// </summary>
     private void ResetSessionProgress()
     {
         _sessionElapsed = 0.0;
         ResetCycle();
     }
 
+    /// <summary>
+    /// Resets the inhalation/exhalation cycle to the initial inhale phase.
+    /// </summary>
     private void ResetCycle()
     {
         _currentPhase = BreathingPhase.Inhale;
@@ -896,6 +1011,9 @@ public partial class Main : Control
         UpdateTexts();
     }
 
+    /// <summary>
+    /// Handles taps/clicks on the transparent full-screen pause area.
+    /// </summary>
     private void OnPauseTouchAreaGuiInput(InputEvent inputEvent)
     {
         if (!IsPrimaryPress(inputEvent))
@@ -907,6 +1025,9 @@ public partial class Main : Control
         GetViewport().SetInputAsHandled();
     }
 
+    /// <summary>
+    /// Returns true for a primary touch or left mouse-button press.
+    /// </summary>
     private static bool IsPrimaryPress(InputEvent inputEvent)
     {
         if (inputEvent is InputEventScreenTouch touch)
@@ -922,6 +1043,9 @@ public partial class Main : Control
         return false;
     }
 
+    /// <summary>
+    /// Gets the active duration for the current inhale or exhale phase.
+    /// </summary>
     private double GetCurrentPhaseDuration()
     {
         return _currentPhase == BreathingPhase.Inhale
@@ -929,16 +1053,25 @@ public partial class Main : Control
             : _settings.ExhaleDuration;
     }
 
+    /// <summary>
+    /// Gets normalized progress inside the current breathing phase.
+    /// </summary>
     private double GetCurrentPhaseProgress()
     {
         return Math.Clamp(_phaseElapsed / GetCurrentPhaseDuration(), 0.0, 1.0);
     }
 
+    /// <summary>
+    /// Gets the total configured session duration in seconds.
+    /// </summary>
     private double GetSessionDuration()
     {
         return _settings.SessionDurationSeconds;
     }
 
+    /// <summary>
+    /// Gets normalized progress through the whole breathing session.
+    /// </summary>
     private double GetSessionProgress()
     {
         double sessionDuration = GetSessionDuration();
@@ -947,12 +1080,18 @@ public partial class Main : Control
             : 0.0;
     }
 
+    /// <summary>
+    /// Formats a duration as minutes and seconds for the pause progress display.
+    /// </summary>
     private static string FormatMinutesSeconds(double totalSeconds)
     {
         int seconds = Math.Max(0, (int)Math.Floor(totalSeconds));
         return $"{seconds / 60}:{seconds % 60:00}";
     }
 
+    /// <summary>
+    /// Applies smootherstep easing to make the ball slow down near both ends.
+    /// </summary>
     private static double EaseInOut(double value)
     {
         double t = Math.Clamp(value, 0.0, 1.0);
@@ -962,6 +1101,9 @@ public partial class Main : Control
         return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
     }
 
+    /// <summary>
+    /// Refreshes all labels and slider values from the current draft/session state.
+    /// </summary>
     private void UpdateTexts()
     {
         if (_inhaleValueLabel != null)
@@ -995,6 +1137,9 @@ public partial class Main : Control
         UpdatePauseProgressDisplay();
     }
 
+    /// <summary>
+    /// Shows or hides main-screen controls according to the current session state.
+    /// </summary>
     private void UpdateMainScreenVisibility()
     {
         bool isStartScreen = !_hasSessionStarted;
@@ -1026,6 +1171,9 @@ public partial class Main : Control
         UpdatePauseProgressDisplay();
     }
 
+    /// <summary>
+    /// Converts current phase progress into eased gauge progress and moves the ball.
+    /// </summary>
     private void UpdateGauge()
     {
         double phaseProgress = GetCurrentPhaseProgress();
@@ -1041,6 +1189,9 @@ public partial class Main : Control
         _gauge.SetProgress(visualProgress);
     }
 
+    /// <summary>
+    /// Refreshes the pause-only elapsed-time label and progress bar fill.
+    /// </summary>
     private void UpdatePauseProgressDisplay()
     {
         if (_pauseElapsedLabel == null || _pauseProgressBar == null || _pauseProgressFill == null)
@@ -1064,6 +1215,9 @@ public partial class Main : Control
         _pauseProgressFill.OffsetRight = fillWidth;
     }
 
+    /// <summary>
+    /// Applies the active theme to the breathing screen and keeps settings neutral.
+    /// </summary>
     private void ApplyColors()
     {
         _background.Color = _settings.BackgroundColor;
