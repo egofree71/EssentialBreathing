@@ -1,19 +1,37 @@
 extends Control
 
+## Main application controller.
+##
+## The scene file intentionally stays almost empty: this script builds the UI in
+## code so the C# and GDScript versions can be compared more easily during the
+## migration. The application has three visual layers:
+## - the main breathing screen;
+## - the settings screen;
+## - a temporary completion overlay shown at the end of a session.
+##
+## Session state is controlled by two booleans:
+## - _has_session_started: the user has pressed Start at least once;
+## - _is_running: the breathing animation is currently advancing.
+## This gives three simple states: waiting, running, paused.
+
 const AppLocalization := preload("res://scripts/app_localization.gd")
 const BreathingSettings := preload("res://scripts/breathing_settings.gd")
 const SettingsStorage := preload("res://scripts/settings_storage.gd")
 const BreathingGauge := preload("res://scripts/breathing_gauge.gd")
 
+# SVG icons are used instead of text glyphs. This avoids small rendering
+# differences between desktop fonts and Android fonts, especially for the stop
+# square and the back arrow.
 const BACK_ICON := preload("res://assets/icons/back.svg")
 const STOP_ICON := preload("res://assets/icons/stop.svg")
 const PLAY_ICON := preload("res://assets/icons/play.svg")
 
 enum BreathingPhase { INHALE, EXHALE }
 
-# Fixed visual size used by the main start/resume/stop buttons. Keep this larger
-# than the text glyph minimum size so Godot does not expand one button differently
-# from the other based on the symbol width or height.
+# Fixed visual size used by the main start/resume/stop buttons.
+#
+# These buttons are positioned manually so the play/resume button stays centered
+# and the stop button appears to its left only while the session is paused.
 const SESSION_BUTTON_SIZE := Vector2(80, 68)
 const SESSION_BUTTON_CENTER_Y := 16.0
 const STOP_BUTTON_CENTER_X := -92.0
@@ -96,6 +114,9 @@ var _was_screen_kept_on_before_session := false
 var _is_keeping_screen_on_for_session := false
 
 
+## Entry point called when the scene is loaded.
+## Loads saved settings, builds the interface, then synchronizes colors, texts
+## and gauge position with the current state.
 func _ready() -> void:
 	# Android export presets can enable immersive fullscreen mode, which hides the
 	# system navigation bar. SimpleBreathing is closer to a small utility app than
@@ -117,6 +138,8 @@ func _ready() -> void:
 	_update_main_screen_visibility()
 
 
+## Keep Android system bars visible. The app is a calm utility, not a fullscreen
+## game, so hiding navigation controls would feel unnecessarily aggressive.
 static func _ensure_android_system_bars_visible() -> void:
 	if OS.get_name() != "Android":
 		return
@@ -124,6 +147,9 @@ static func _ensure_android_system_bars_visible() -> void:
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 
 
+## Advances the breathing cycle while a session is running.
+## The gauge is updated from elapsed time, not from a tween, so pause/resume and
+## mobile app lifecycle interruptions remain predictable.
 func _process(delta: float) -> void:
 	if not _is_running:
 		return
@@ -146,10 +172,15 @@ func _process(delta: float) -> void:
 	_update_pause_progress_display()
 
 
+## Safety hook: if the app exits during a session, restore the previous
+## keep-screen-on setting.
 func _exit_tree() -> void:
 	_restore_screen_keep_on_state()
 
 
+## Builds the three top-level UI layers.
+## Keeping them as separate controls makes screen switching simple: only one main
+## screen is visible at a time, while the completion overlay sits above both.
 func _build_interface() -> void:
 	_background = ColorRect.new()
 	_background.name = "Background"
@@ -171,6 +202,9 @@ func _build_interface() -> void:
 	_fill_parent(_completion_overlay)
 
 
+## Applies platform safe-area margins to interactive content.
+## This keeps buttons away from notches, rounded corners and Android system bars,
+## while the background still fills the whole screen.
 func _update_safe_area_margins() -> void:
 	if _main_screen_margin == null or _settings_screen_margin == null:
 		return
@@ -197,6 +231,8 @@ func _update_safe_area_margins() -> void:
 		_top_action_row.position = Vector2(20.0 + safe_margins.x, 16.0 + safe_margins.y)
 
 
+## Converts the display safe area from physical window pixels into the current
+## viewport coordinate system used by Control nodes. Returns left/top/right/bottom.
 func _get_safe_area_margins_in_viewport_units() -> Vector4:
 	var os_name := OS.get_name()
 	if os_name != "Android" and os_name != "iOS":
@@ -238,6 +274,8 @@ static func _to_margin_constant(value: float) -> int:
 	return maxi(0, int(roundf(value)))
 
 
+## Creates the black fade overlay shown when a breathing session finishes
+## naturally. The overlay blocks input during the short end animation.
 func _build_completion_overlay() -> Control:
 	var overlay := Control.new()
 	overlay.name = "CompletionOverlay"
@@ -273,6 +311,8 @@ func _build_completion_overlay() -> Control:
 	return overlay
 
 
+## Builds the breathing screen: optional pause progress at the top, the gauge in
+## the middle, and the start/resume/stop controls at the bottom.
 func _build_main_screen() -> Control:
 	var root := Control.new()
 	root.name = "MainScreen"
@@ -319,6 +359,8 @@ func _build_main_screen() -> Control:
 	return root
 
 
+## Builds the settings button row. It is overlaid on top of the main layout so it
+## does not affect gauge centering.
 func _build_top_action_row() -> Control:
 	var row := HBoxContainer.new()
 	row.name = "TopActionRow"
@@ -338,6 +380,8 @@ func _build_top_action_row() -> Control:
 	return row
 
 
+## Builds the progress display shown only while the session is paused.
+## The area keeps a reserved height even when hidden so the gauge does not jump.
 func _build_pause_progress_area() -> Control:
 	var area := Control.new()
 	area.name = "PauseProgressArea"
@@ -400,6 +444,8 @@ func _build_pause_progress_area() -> Control:
 	return area
 
 
+## Builds the bottom control area. The play/resume button remains centered; the
+## stop button appears on the left only after the session has been paused.
 func _build_bottom_controls() -> Control:
 	var controls := Control.new()
 	controls.name = "BottomControls"
@@ -420,6 +466,8 @@ func _build_bottom_controls() -> Control:
 	return controls
 
 
+## Builds the settings screen. Changes are applied immediately, so there is no
+## separate Save button and no pending state to confirm.
 func _build_settings_screen() -> Control:
 	var root := Control.new()
 	root.name = "SettingsScreenRoot"
@@ -505,6 +553,9 @@ func _create_section_title(text: String) -> Label:
 	return label
 
 
+## Creates one +/- duration row for inhale or exhale.
+## The value label is stored in a member variable so _update_texts() can refresh
+## it after each change.
 func _create_duration_row(label_text: String, value_label_member_name: String, decrease: Callable, increase: Callable) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.name = label_text + "Row"
@@ -539,6 +590,8 @@ func _create_duration_row(label_text: String, value_label_member_name: String, d
 	return row
 
 
+## Creates the session-duration slider. Values are rounded to whole minutes and
+## clamped by BreathingSettings.
 func _create_session_duration_slider() -> VBoxContainer:
 	var container := VBoxContainer.new()
 	container.name = "SessionDurationContainer"
@@ -580,6 +633,8 @@ func _create_session_duration_slider() -> VBoxContainer:
 	return container
 
 
+## Creates the theme picker. Theme names are localization keys, not hard-coded
+## labels, so they follow the device language.
 func _create_theme_row() -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.name = "ThemeRow"
@@ -620,6 +675,8 @@ func _create_icon_button(text: String, on_pressed: Callable, font_size := 28) ->
 	return button
 
 
+## Creates a large SVG-icon button for the main breathing controls.
+## expand_icon makes the SVG fill the button consistently on desktop and Android.
 func _create_session_svg_icon_button(icon_texture: Texture2D, on_pressed: Callable) -> Button:
 	var button := Button.new()
 	button.text = ""
@@ -642,6 +699,7 @@ func _create_settings_button(text: String, on_pressed: Callable) -> Button:
 	return button
 
 
+## Creates a small SVG-icon button for the settings header.
 func _create_settings_svg_icon_button(icon_texture: Texture2D, on_pressed: Callable) -> Button:
 	var button := Button.new()
 	button.text = ""
@@ -654,6 +712,9 @@ func _create_settings_svg_icon_button(icon_texture: Texture2D, on_pressed: Calla
 	return button
 
 
+## Styles the translucent buttons on the main screen.
+## The optional content shift exists for tiny visual corrections without changing
+## button geometry.
 static func _apply_main_button_style(button: Button, icon_color: Color, content_shift_x := 0.0, content_shift_y := 0.0) -> void:
 	button.add_theme_color_override("font_color", icon_color)
 	button.add_theme_color_override("font_hover_color", icon_color)
@@ -690,6 +751,8 @@ static func _create_main_button_style_box(color: Color, background_alpha: float,
 	return style
 
 
+## Styles settings-screen buttons in neutral black and white, independent from
+## the selected breathing theme.
 static func _apply_settings_button_style(button: Button) -> void:
 	button.add_theme_color_override("font_color", Color.WHITE)
 	button.add_theme_color_override("font_hover_color", Color.WHITE)
@@ -725,6 +788,8 @@ static func _create_settings_button_style_box(fill_color: Color) -> StyleBoxFlat
 	return style
 
 
+## Manually positions a session button around the horizontal center of the bottom
+## control area. This avoids HBox reflow when stop appears/disappears.
 static func _position_session_button(control: Control, center_x: float) -> void:
 	control.anchor_left = 0.5
 	control.anchor_top = 0.0
@@ -805,6 +870,9 @@ func _select_next_theme() -> void:
 	_apply_current_settings_immediately()
 
 
+## Applies draft settings to the active settings object and saves them right away.
+## Timing changes reset the current session so the gauge never continues with a
+## half-old, half-new rhythm.
 func _apply_current_settings_immediately() -> void:
 	var timing_changed := (
 		absf(_settings.inhale_duration - _draft_inhale_duration) > 0.001 or
@@ -825,6 +893,7 @@ func _apply_current_settings_immediately() -> void:
 	_update_texts()
 
 
+## Copies active settings into the draft values shown by the settings controls.
 func _reset_draft_settings_from_current() -> void:
 	_draft_inhale_duration = _settings.inhale_duration
 	_draft_exhale_duration = _settings.exhale_duration
@@ -843,6 +912,7 @@ static func _wrap_theme_index(value: int) -> int:
 	return result
 
 
+## Starts a new session or resumes a paused one.
 func _start_or_resume_breathing_session() -> void:
 	if not _has_session_started:
 		_reset_session_progress()
@@ -855,6 +925,7 @@ func _start_or_resume_breathing_session() -> void:
 	_update_texts()
 
 
+## Pauses the current session without resetting elapsed time.
 func _pause_breathing_session() -> void:
 	if not _has_session_started or not _is_running:
 		return
@@ -864,6 +935,8 @@ func _pause_breathing_session() -> void:
 	_update_texts()
 
 
+## Handles a natural session end: fade to black, reset while hidden, show the
+## completion message briefly, then fade back to the initial screen.
 func _complete_breathing_session() -> void:
 	if _is_showing_completion:
 		return
@@ -907,6 +980,7 @@ func _complete_breathing_session() -> void:
 	_is_showing_completion = false
 
 
+## Stops the session immediately and returns to the initial waiting state.
 func _stop_breathing_session() -> void:
 	_has_session_started = false
 	_is_running = false
@@ -916,6 +990,8 @@ func _stop_breathing_session() -> void:
 	_update_texts()
 
 
+## Opens settings from the initial screen. Any running session is explicitly
+## stopped to keep settings changes simple and deterministic.
 func _show_settings_screen() -> void:
 	# Settings are currently available only before a breathing session starts. If
 	# this is called from a future UI path, stop the session explicitly.
@@ -931,6 +1007,7 @@ func _show_settings_screen() -> void:
 	_settings_screen.visible = true
 
 
+## Returns from settings to the breathing screen.
 func _show_main_screen() -> void:
 	_settings_screen.visible = false
 	_main_screen.visible = true
@@ -938,6 +1015,8 @@ func _show_main_screen() -> void:
 	_update_texts()
 
 
+## Prevents the phone from sleeping during a breathing session. The previous
+## setting is saved so it can be restored exactly afterward.
 func _enable_screen_keep_on_for_session() -> void:
 	if _is_keeping_screen_on_for_session:
 		return
@@ -947,6 +1026,7 @@ func _enable_screen_keep_on_for_session() -> void:
 	_is_keeping_screen_on_for_session = true
 
 
+## Restores the device keep-screen-on flag to its pre-session value.
 func _restore_screen_keep_on_state() -> void:
 	if not _is_keeping_screen_on_for_session:
 		return
@@ -968,6 +1048,8 @@ func _reset_cycle() -> void:
 	_update_texts()
 
 
+## While running, any tap on the transparent pause area pauses the session.
+## This is friendlier on mobile than asking the user to hit a small button.
 func _on_pause_touch_area_gui_input(input_event: InputEvent) -> void:
 	if not _is_primary_press(input_event):
 		return
@@ -976,6 +1058,8 @@ func _on_pause_touch_area_gui_input(input_event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
+## Accept both mobile touches and desktop left-clicks so the same code works in
+## Android exports and in the Godot editor.
 static func _is_primary_press(input_event: InputEvent) -> bool:
 	if input_event is InputEventScreenTouch:
 		var touch := input_event as InputEventScreenTouch
@@ -992,6 +1076,7 @@ func _get_current_phase_duration() -> float:
 	return _settings.inhale_duration if _current_phase == BreathingPhase.INHALE else _settings.exhale_duration
 
 
+## Normalized progress inside the current inhale/exhale phase, from 0 to 1.
 func _get_current_phase_progress() -> float:
 	return clampf(_phase_elapsed / _get_current_phase_duration(), 0.0, 1.0)
 
@@ -1000,11 +1085,13 @@ func _get_session_duration() -> float:
 	return _settings.get_session_duration_seconds()
 
 
+## Normalized progress of the whole session, from 0 to 1.
 func _get_session_progress() -> float:
 	var session_duration := _get_session_duration()
 	return clampf(_session_elapsed / session_duration, 0.0, 1.0) if session_duration > 0.0 else 0.0
 
 
+## Formats elapsed time for the pause screen, for example 1:05.
 static func _format_minutes_seconds(total_seconds: float) -> String:
 	var seconds := maxi(0, int(floorf(total_seconds)))
 	var minutes := int(seconds / 60)
@@ -1019,6 +1106,7 @@ static func _ease_in_out(value: float) -> float:
 	return t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
 
 
+## Refreshes every label from the current draft/settings values and localization.
 func _update_texts() -> void:
 	if _completion_label != null:
 		_completion_label.text = AppLocalization.translate(AppLocalization.SESSION_COMPLETED)
@@ -1043,6 +1131,8 @@ func _update_texts() -> void:
 	_update_pause_progress_display()
 
 
+## Shows or hides controls according to the three session states: waiting,
+## running or paused. Layout containers remain visible to prevent UI jumps.
 func _update_main_screen_visibility() -> void:
 	var is_start_screen := not _has_session_started
 	var is_paused_session := _has_session_started and not _is_running
@@ -1071,6 +1161,7 @@ func _update_main_screen_visibility() -> void:
 	_update_pause_progress_display()
 
 
+## Converts breathing phase progress into visual gauge progress.
 func _update_gauge() -> void:
 	var phase_progress := _get_current_phase_progress()
 	var eased_progress := _ease_in_out(phase_progress)
@@ -1083,6 +1174,7 @@ func _update_gauge() -> void:
 	_gauge.set_progress(visual_progress)
 
 
+## Refreshes the paused-session elapsed-time label and progress bar.
 func _update_pause_progress_display() -> void:
 	if _pause_elapsed_label == null or _pause_progress_bar == null or _pause_progress_fill == null:
 		return
@@ -1104,6 +1196,8 @@ func _update_pause_progress_display() -> void:
 	_pause_progress_fill.offset_right = fill_width
 
 
+## Applies the selected theme to the breathing screen. Settings remain neutral
+## black/white for readability regardless of the active theme.
 func _apply_colors() -> void:
 	_background.color = _settings.background_color
 	_gauge.gauge_color = _settings.gauge_color
@@ -1121,6 +1215,7 @@ func _apply_colors() -> void:
 	_apply_main_button_style(_stop_button, _settings.text_color)
 
 
+## Recursively applies text color to labels and buttons below a UI subtree.
 static func _apply_text_color_recursive(node: Node, color: Color) -> void:
 	if node is Label:
 		var label := node as Label
@@ -1135,6 +1230,8 @@ static func _apply_text_color_recursive(node: Node, color: Color) -> void:
 		_apply_text_color_recursive(child, color)
 
 
+## Anchors a Control to fill its parent. Used heavily because the UI is created
+## programmatically instead of being laid out in the scene editor.
 static func _fill_parent(control: Control) -> void:
 	control.anchor_left = 0.0
 	control.anchor_top = 0.0

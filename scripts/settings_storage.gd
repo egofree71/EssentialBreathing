@@ -17,6 +17,8 @@ const SESSION_DURATION_MINUTES_KEY := "session_duration_minutes"
 const THEME_INDEX_KEY := "theme_index"
 
 
+## Loads persisted settings into the provided BreathingSettings instance.
+## Invalid or missing values fall back to the current defaults and are clamped.
 static func load_settings(settings) -> bool:
 	if not FileAccess.file_exists(SETTINGS_PATH):
 		return false
@@ -42,6 +44,7 @@ static func load_settings(settings) -> bool:
 	return true
 
 
+## Saves the currently active settings. Called immediately after each user change.
 static func save_settings(settings) -> bool:
 	var config := ConfigFile.new()
 
@@ -59,6 +62,8 @@ static func save_settings(settings) -> bool:
 	return true
 
 
+## Typed accessors keep load_settings() readable and preserve defaults for
+## settings that do not exist yet, for example after an app update.
 static func _read_float(config: ConfigFile, key: String, default_value: float) -> float:
 	if not config.has_section_key(SETTINGS_SECTION, key):
 		return default_value

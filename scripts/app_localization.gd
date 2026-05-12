@@ -68,6 +68,8 @@ const TRANSLATIONS := {
 }
 
 
+## Returns the translation for a key using the device language, then English as
+## fallback. Unknown keys are returned as-is to make missing entries visible.
 static func translate(key: String) -> String:
 	var language := _get_language_code()
 
@@ -84,6 +86,8 @@ static func format_session_duration_minutes(minutes: int) -> String:
 	return translate(SESSION_DURATION_MINUTES_FORMAT).format([minutes])
 
 
+## Maps full locales such as fr_CH or es_ES to the small set of languages the
+## app currently supports.
 static func _get_language_code() -> String:
 	var locale := TranslationServer.get_locale()
 	if locale.strip_edges().is_empty():

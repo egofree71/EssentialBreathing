@@ -1,15 +1,24 @@
 extends RefCounted
 
-## In-memory settings for one breathing session.
+## In-memory settings for the application.
+##
+## This object contains both timing values and the currently selected color theme.
+## Persistence is handled by settings_storage.gd so this class stays focused on
+## validation, defaults and theme application.
 
+# Durations are edited in half-second steps, with hard limits to avoid values
+# that would make the animation unusable.
 const DURATION_STEP := 0.5
 const MINIMUM_DURATION := 1.0
 const MAXIMUM_DURATION := 20.0
 
+# Whole-session duration is edited in minutes.
 const SESSION_DURATION_STEP_MINUTES := 1
 const MINIMUM_SESSION_DURATION_MINUTES := 1
 const MAXIMUM_SESSION_DURATION_MINUTES := 60
 
+# Each theme stores all colors needed by the breathing screen. The name is a
+# localization key resolved by app_localization.gd.
 const THEMES := [
 	{
 		"name_key": "THEME_OCEAN",
@@ -81,6 +90,8 @@ func move_to_previous_theme() -> void:
 	apply_theme(current_theme_index - 1)
 
 
+## Wraps the theme index, then copies the selected palette into direct fields so
+## the UI can read colors without knowing the internal theme dictionary format.
 func apply_theme(theme_index: int) -> void:
 	current_theme_index = wrap_index(theme_index, THEMES.size())
 	var theme: Dictionary = THEMES[current_theme_index]
@@ -100,6 +111,8 @@ static func clamp_session_duration_minutes(value: int) -> int:
 	return clampi(value, MINIMUM_SESSION_DURATION_MINUTES, MAXIMUM_SESSION_DURATION_MINUTES)
 
 
+## Modulo helper that also handles negative values, useful for previous/next
+## theme navigation.
 static func wrap_index(value: int, length: int) -> int:
 	if length <= 0:
 		return 0

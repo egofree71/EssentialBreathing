@@ -18,11 +18,14 @@ var gauge_border_color := Color(0.36, 0.48, 0.62)
 var ball_color := Color(0.43, 0.78, 0.98)
 
 
+## Updates the normalized ball position and requests a redraw.
 func set_progress(progress: float) -> void:
 	_progress = clampf(progress, 0.0, 1.0)
 	queue_redraw()
 
 
+## Godot draw callback. Everything is computed from the current Control size so
+## the gauge adapts to desktop and phone screen dimensions.
 func _draw() -> void:
 	var width := size.x
 	var height := size.y
@@ -56,6 +59,7 @@ func _draw() -> void:
 	draw_circle(ball_center, ball_radius, ball_color)
 
 
+## Draws a capsule manually using a rectangle and two circles.
 func _draw_capsule_gauge(rect: Rect2) -> void:
 	var radius := rect.size.x * 0.5
 	var center_x := rect.position.x + radius
