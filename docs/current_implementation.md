@@ -11,7 +11,9 @@ The current design goal is to keep the mobile interface calm and minimal:
 - the main screen is focused on the breathing animation;
 - settings are separated from the breathing screen;
 - controls disappear during the breathing session;
-- the breathing movement should feel smooth and natural rather than mechanical.
+- the breathing movement should feel smooth and natural rather than mechanical;
+- the gauge should feel visually centered and stable;
+- settings changes should not affect the main screen until explicitly saved.
 
 ## Project structure
 
@@ -75,7 +77,7 @@ This matches a phone-oriented vertical layout.
 
 ### `scenes/Main.tscn`
 
-Root scene of type:
+Root scene type:
 
 ```text
 Control
@@ -101,11 +103,39 @@ Responsibilities:
 - create the main breathing screen;
 - create the settings screen;
 - manage screen switching;
+- manage settings draft values;
+- apply settings only when the user saves;
 - manage the breathing session state;
 - manage the inhalation/exhalation cycle;
-- apply breathing durations;
+- manage total session duration;
+- update the pause progress display;
 - apply color themes to the main screen;
 - keep the settings screen readable with a neutral black-and-white style.
+
+The controller methods are now documented with XML comments. Short inline comments are also used for non-trivial layout and state-management details.
+
+### Important runtime state
+
+`Main.cs` keeps two categories of settings:
+
+```text
+_settings
+```
+
+Active settings used by the main breathing screen and the running session.
+
+```text
+_draftInhaleDuration
+_draftExhaleDuration
+_draftSessionDurationMinutes
+_draftThemeIndex
+```
+
+Draft settings edited on the settings screen.
+
+The draft values are copied to `_settings` only when the user presses the save icon.
+
+This avoids a confusing behavior where pressing the back arrow after editing settings still changed the main screen.
 
 ## Main screen
 
@@ -126,7 +156,8 @@ Details:
 - the `Simple Breathing` title is no longer displayed;
 - the settings button is in the top-left corner;
 - the start button is centered near the bottom;
-- the gauge is positioned slightly higher than the exact vertical center;
+- the gauge is vertically centered in the screen;
+- the top pause-progress area and bottom control area reserve matching heights, so the gauge remains centered and stable;
 - the bottom button area is kept stable so the gauge does not resize when buttons appear or disappear.
 
 ### Start
@@ -160,7 +191,8 @@ When the user touches/clicks the screen:
 
 - the session is paused;
 - the stop button appears to the left;
-- the resume button appears centered under the gauge.
+- the resume button appears centered under the gauge;
+- the pause progress display appears above the gauge.
 
 ### Paused session
 
@@ -174,6 +206,26 @@ The `▶` resume button stays in the same centered position as the original star
 
 The `■` stop button appears to its left.
 
+Above the gauge, the app displays:
+
+```text
+elapsed time / total session duration
+[session progress bar]
+```
+
+The progress bar:
+
+- is about three quarters of the base viewport width;
+- has a semi-transparent white background;
+- fills with white according to the elapsed session duration;
+- represents progress through the whole breathing session, not only the current inhale/exhale cycle.
+
+Example:
+
+```text
+0:42 / 5:00
+```
+
 ### Stop
 
 The stop button uses:
@@ -185,8 +237,17 @@ The stop button uses:
 When pressed:
 
 - the session stops;
+- the total session timer resets;
 - the breathing cycle resets;
 - the ball returns to the bottom;
+- the app returns to the initial main screen.
+
+### Automatic end
+
+When the configured session duration is reached:
+
+- the session stops automatically;
+- the cycle resets;
 - the app returns to the initial main screen.
 
 ## Settings screen
@@ -201,7 +262,7 @@ It uses a fixed neutral style:
 - very dark button fill;
 - white SVG save icon.
 
-The settings screen no longer previews the selected theme colors directly. This is intentional: some themes made buttons hard to read when the settings screen used theme colors.
+The settings screen does not preview the selected theme colors directly. This is intentional: some themes made buttons hard to read when the settings screen used theme colors.
 
 Current layout:
 
@@ -210,8 +271,10 @@ Current layout:
 
 Respiration
 
-Inspiration    [−]  4.0s  [+]
-Expiration     [−]  4.0s  [+]
+Inspiration        [−]  4.0s  [+]
+Expiration         [−]  4.0s  [+]
+Durée de séance     5 min
+[slider]
 
 Thèmes
 
@@ -220,7 +283,22 @@ Thèmes
 [save icon]
 ```
 
-### Settings screen buttons
+### Settings editing model
+
+The settings screen uses a draft model:
+
+- changing a value updates only the draft state;
+- pressing `←` cancels the draft changes and returns to the main screen;
+- pressing the save icon applies the draft changes to the active settings and returns to the main screen.
+
+Affected values:
+
+- inhalation duration;
+- exhalation duration;
+- total session duration;
+- selected theme.
+
+### Duration buttons
 
 The duration buttons use:
 
@@ -229,6 +307,39 @@ The duration buttons use:
 +
 ```
 
+The values are edited in steps of:
+
+```text
+0.5 second
+```
+
+### Session duration slider
+
+The total session duration is edited with a slider.
+
+Default value:
+
+```text
+5 minutes
+```
+
+Limits:
+
+```text
+Minimum : 1 minute
+Maximum : 60 minutes
+```
+
+Step:
+
+```text
+1 minute
+```
+
+The slider intentionally edits only whole minutes, not seconds.
+
+### Theme buttons
+
 The theme selection buttons use:
 
 ```text
@@ -236,7 +347,9 @@ The theme selection buttons use:
 ›
 ```
 
-These button symbols and the main labels have been enlarged for better readability on mobile.
+The selected theme name is displayed between the buttons.
+
+The theme change is applied to the main screen only after pressing the save icon.
 
 ### Save button
 
@@ -252,11 +365,40 @@ It is displayed through:
 scripts/FloppyIcon.cs
 ```
 
-Important: settings are currently applied immediately in memory. The save button currently acts as an explicit validation button that returns to the main screen.
+Important: settings are currently applied in memory only. The save button applies the draft values to the active in-memory settings and returns to the main screen.
 
 Settings are **not persisted to disk yet**.
 
-## Breathing cycle
+## Breathing session and cycle
+
+There are two timing layers:
+
+1. the total session timer;
+2. the repeated inhale/exhale breathing cycle.
+
+### Session timer
+
+The session timer is stored in seconds internally:
+
+```text
+_sessionElapsed
+```
+
+The configured session duration comes from:
+
+```csharp
+_settings.SessionDurationSeconds
+```
+
+When:
+
+```text
+_sessionElapsed >= SessionDurationSeconds
+```
+
+The app calls `StopBreathingSession()`.
+
+### Breathing cycle
 
 The cycle has two phases:
 
@@ -284,11 +426,12 @@ When the app starts:
 - no session is running;
 - the ball is visible at the bottom;
 - the current phase is `Inhale`;
-- elapsed phase time is `0`.
+- elapsed phase time is `0`;
+- elapsed session time is `0`.
 
 ## Eased movement
 
-The ball no longer moves linearly.
+The ball does not move linearly.
 
 Instead, the phase progress is passed through an easing function:
 
@@ -332,7 +475,9 @@ The gauge has:
 - no side markers;
 - no tick marks.
 
-The gauge was reduced by roughly 10% compared with the earlier version, to feel lighter on a phone screen.
+The gauge was reduced by roughly 10% compared with an earlier version, to feel lighter on a phone screen.
+
+The main screen now positions the gauge so it is visually centered in the screen.
 
 ### Ball
 
@@ -371,7 +516,7 @@ The progress value is clamped between `0.0` and `1.0`.
 
 Contains in-memory breathing parameters and color themes.
 
-### Durations
+### Inhalation and exhalation durations
 
 Default values:
 
@@ -397,6 +542,39 @@ The clamp method is:
 
 ```csharp
 ClampDuration(double value)
+```
+
+### Session duration
+
+Default value:
+
+```text
+5 minutes
+```
+
+Step:
+
+```text
+1 minute
+```
+
+Limits:
+
+```text
+Minimum : 1 minute
+Maximum : 60 minutes
+```
+
+The active session duration is exposed as seconds through:
+
+```csharp
+SessionDurationSeconds
+```
+
+The clamp method is:
+
+```csharp
+ClampSessionDurationMinutes(int value)
 ```
 
 ### Themes
@@ -478,18 +656,25 @@ Implemented and validated:
 - stop button appearing left of the resume button when paused;
 - hidden controls during a running session;
 - tap/click anywhere to pause while running;
+- pause progress display above the gauge;
+- progress bar based on total session duration;
+- automatic stop when session duration is reached;
 - vertical rounded capsule-shaped gauge;
+- gauge vertically centered on the main screen;
 - gauge without visible border;
 - gauge without side markers;
 - gauge reduced by about 10%;
 - ball using the full gauge width;
 - eased breathing movement with slowdown near the top and bottom;
 - editable inhalation/exhalation durations;
+- editable total session duration with a whole-minute slider;
 - theme switching;
+- settings draft/cancel/save behavior;
 - themes renamed and recolored;
 - neutral black-and-white settings screen;
 - larger settings text and button symbols;
 - SVG save icon;
+- XML comments added to `Main.cs` methods;
 - implementation documentation.
 
 ## Technical points to watch
@@ -519,14 +704,19 @@ Then reopen the project in Godot, build it, and run it again.
 
 If the save icon does not appear after copying the package, close and reopen the Godot project so the SVG asset can be imported.
 
+### Settings persistence
+
+The save button currently applies settings only in memory.
+
+This means settings are not persisted after closing the app. A future step should store them locally, probably through Godot user settings or a small config file.
+
 ## Later improvements
 
 Possible next steps:
 
 - persist settings locally;
-- improve the main screen theme colors further;
 - test button sizes on a real Android phone;
 - test the breathing rhythm on an actual phone screen;
 - prepare Android export;
-- decide whether the save button should actually save persistent settings or simply be renamed/treated as a confirmation button;
+- add a calm completion state instead of immediately returning to the start screen;
 - optionally add haptic feedback or sound, if it remains calm and unobtrusive.

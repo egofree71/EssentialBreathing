@@ -9,9 +9,11 @@ SimpleBreathing displays a vertical breathing gauge with a ball that moves upwar
 The interface is intentionally minimal and calm:
 
 - the main screen focuses on the gauge and the breathing ball;
+- the gauge is vertically centered in the screen;
 - settings are kept on a separate screen;
 - during a breathing session, controls are hidden;
-- tapping the screen pauses the session.
+- tapping the screen pauses the session;
+- while paused, the app shows elapsed session time and a progress bar.
 
 ## Current state
 
@@ -23,12 +25,16 @@ Implemented:
 - vertical rounded capsule-shaped gauge;
 - large breathing ball inside the gauge;
 - eased ball movement for a more natural breathing rhythm;
-- start, pause, resume, and stop session flow;
+- configurable inhalation and exhalation durations;
+- configurable total session duration in whole minutes;
+- start, pause, resume, stop, and automatic session end flow;
+- pause progress display above the gauge;
 - separate settings screen;
-- editable inhalation and exhalation durations;
+- deferred settings editing: changes are applied only when pressing the save icon;
 - selectable visual themes;
 - neutral black-and-white settings screen for readability;
-- SVG save icon in the settings screen.
+- SVG save icon in the settings screen;
+- documented `Main.cs` controller methods.
 
 ## Technical documentation
 
