@@ -239,6 +239,7 @@ When the user touches/clicks the screen:
 - the keep-screen-on flag remains active because the session has not been stopped;
 - the stop button appears to the left;
 - the resume button appears centered under the gauge;
+- the pause elapsed-time text is shown in a slightly larger size for better phone readability;
 - the pause progress display appears above the gauge.
 
 ### Paused session
@@ -249,7 +250,7 @@ Visible controls:
 [■]     [▶]
 ```
 
-The `▶` resume button stays in the same centered position as the original start button.
+The `▶` resume button stays in the same centered position as the original start button. Its glyph is also nudged slightly to the right inside the button so it looks more visually centered on real devices.
 
 The `■` stop button appears to its left.
 
@@ -842,6 +843,7 @@ Implemented and validated:
 - previous screen sleep behavior restored when the session stops, completes, or the scene exits;
 - tap/click anywhere to pause while running;
 - pause progress display above the gauge;
+- slightly larger pause elapsed-time text for better readability;
 - progress bar based on total session duration;
 - soft completion fade when session duration is reached;
 - vertical rounded capsule-shaped gauge;

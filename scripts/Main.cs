@@ -488,7 +488,7 @@ public partial class Main : Control
             HorizontalAlignment = Godot.HorizontalAlignment.Center,
             Visible = false
         };
-        _pauseElapsedLabel.AddThemeFontSizeOverride("font_size", 18);
+        _pauseElapsedLabel.AddThemeFontSizeOverride("font_size", 24);
         column.AddChild(_pauseElapsedLabel);
 
         var barCenter = new CenterContainer
@@ -890,7 +890,7 @@ public partial class Main : Control
     /// overrides keep the buttons subtle by tinting the background from the current
     /// theme text color and using transparency instead of an opaque grey block.
     /// </remarks>
-    private static void ApplyMainButtonStyle(Button button, Color iconColor)
+    private static void ApplyMainButtonStyle(Button button, Color iconColor, float contentShiftX = 0.0f, float contentShiftY = 0.0f)
     {
         button.AddThemeColorOverride("font_color", iconColor);
         button.AddThemeColorOverride("font_hover_color", iconColor);
@@ -898,18 +898,20 @@ public partial class Main : Control
         button.AddThemeColorOverride("font_focus_color", iconColor);
         button.AddThemeColorOverride("font_disabled_color", new Color(iconColor.R, iconColor.G, iconColor.B, 0.45f));
 
-        button.AddThemeStyleboxOverride("normal", CreateMainButtonStyleBox(iconColor, 0.10f, 0.16f));
-        button.AddThemeStyleboxOverride("hover", CreateMainButtonStyleBox(iconColor, 0.16f, 0.22f));
-        button.AddThemeStyleboxOverride("pressed", CreateMainButtonStyleBox(iconColor, 0.24f, 0.30f));
-        button.AddThemeStyleboxOverride("focus", CreateMainButtonStyleBox(iconColor, 0.10f, 0.32f));
-        button.AddThemeStyleboxOverride("disabled", CreateMainButtonStyleBox(iconColor, 0.06f, 0.10f));
+        button.AddThemeStyleboxOverride("normal", CreateMainButtonStyleBox(iconColor, 0.10f, 0.16f, contentShiftX, contentShiftY));
+        button.AddThemeStyleboxOverride("hover", CreateMainButtonStyleBox(iconColor, 0.16f, 0.22f, contentShiftX, contentShiftY));
+        button.AddThemeStyleboxOverride("pressed", CreateMainButtonStyleBox(iconColor, 0.24f, 0.30f, contentShiftX, contentShiftY));
+        button.AddThemeStyleboxOverride("focus", CreateMainButtonStyleBox(iconColor, 0.10f, 0.32f, contentShiftX, contentShiftY));
+        button.AddThemeStyleboxOverride("disabled", CreateMainButtonStyleBox(iconColor, 0.06f, 0.10f, contentShiftX, contentShiftY));
     }
 
     /// <summary>
     /// Creates one translucent StyleBoxFlat variant for main-screen buttons.
     /// </summary>
-    private static StyleBoxFlat CreateMainButtonStyleBox(Color color, float backgroundAlpha, float borderAlpha)
+    private static StyleBoxFlat CreateMainButtonStyleBox(Color color, float backgroundAlpha, float borderAlpha, float contentShiftX = 0.0f, float contentShiftY = 0.0f)
     {
+        const float baseContentMargin = 8.0f;
+
         var style = new StyleBoxFlat
         {
             BgColor = new Color(color.R, color.G, color.B, backgroundAlpha),
@@ -922,10 +924,10 @@ public partial class Main : Control
             CornerRadiusTopRight = 8,
             CornerRadiusBottomRight = 8,
             CornerRadiusBottomLeft = 8,
-            ContentMarginLeft = 8,
-            ContentMarginTop = 8,
-            ContentMarginRight = 8,
-            ContentMarginBottom = 8
+            ContentMarginLeft = MathF.Max(0.0f, baseContentMargin + contentShiftX),
+            ContentMarginTop = MathF.Max(0.0f, baseContentMargin + contentShiftY),
+            ContentMarginRight = MathF.Max(0.0f, baseContentMargin - contentShiftX),
+            ContentMarginBottom = MathF.Max(0.0f, baseContentMargin - contentShiftY)
         };
 
         return style;
@@ -1540,7 +1542,7 @@ public partial class Main : Control
         ApplyTextColorRecursive(_settingsScreen, Colors.White);
 
         ApplyMainButtonStyle(_settingsButton, _settings.TextColor);
-        ApplyMainButtonStyle(_startResumeButton, _settings.TextColor);
+        ApplyMainButtonStyle(_startResumeButton, _settings.TextColor, contentShiftX: 2.0f);
         ApplyMainButtonStyle(_stopButton, _settings.TextColor);
     }
 
