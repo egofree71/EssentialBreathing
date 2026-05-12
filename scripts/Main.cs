@@ -21,8 +21,8 @@ public partial class Main : Control
     // Active breathing durations and color theme selection.
     private readonly BreathingSettings _settings = new();
 
-    // Draft values edited on the settings screen. They are copied to _settings only
-    // when the user presses the save button.
+    // Working values shown on the settings screen. They are applied and saved
+    // immediately after each user change.
     private double _draftInhaleDuration;
     private double _draftExhaleDuration;
     private int _draftSessionDurationMinutes;
@@ -475,7 +475,7 @@ public partial class Main : Control
         headerRow.AddThemeConstantOverride("separation", 12);
         column.AddChild(headerRow);
 
-        headerRow.AddChild(CreateSettingsIconButton("←", CancelSettings, 28));
+        headerRow.AddChild(CreateSettingsIconButton("←", ShowMainScreen, 28));
 
         var title = new Label
         {
@@ -511,22 +511,14 @@ public partial class Main : Control
         column.AddChild(colorsTitle);
         column.AddChild(CreateThemeRow());
 
-        // Pushes the save button toward the bottom without hard-coding a phone height.
+        // Keeps the settings content near the top without adding a separate Save button.
+        // Each setting is applied and persisted immediately when the user changes it.
         var flexibleSpacer = new Control
         {
             Name = "SettingsFlexibleSpacer",
             SizeFlagsVertical = SizeFlags.ExpandFill
         };
         column.AddChild(flexibleSpacer);
-
-        var saveRow = new HBoxContainer
-        {
-            Name = "SettingsSaveRow",
-            Alignment = BoxContainer.AlignmentMode.Center,
-            SizeFlagsHorizontal = SizeFlags.ExpandFill
-        };
-        saveRow.AddChild(CreateSettingsSaveButton(SaveSettings));
-        column.AddChild(saveRow);
 
         return root;
     }
@@ -751,32 +743,6 @@ public partial class Main : Control
     }
 
     /// <summary>
-    /// Creates the settings save button and places the SVG floppy icon inside it.
-    /// </summary>
-    private Button CreateSettingsSaveButton(Action onPressed)
-    {
-        var button = new Button
-        {
-            Text = string.Empty,
-            CustomMinimumSize = new Vector2(64, 56)
-        };
-        ApplySettingsButtonStyle(button);
-
-        var icon = new FloppyIcon
-        {
-            Name = "SaveIcon",
-            MouseFilter = MouseFilterEnum.Ignore,
-            IconColor = Colors.White
-        };
-        button.AddChild(icon);
-        // Smaller insets so the floppy icon appears larger inside the same button.
-        InsetControl(icon, 7, 5, 7, 5);
-
-        button.Pressed += onPressed;
-        return button;
-    }
-
-    /// <summary>
     /// Applies the neutral black-and-white button style used by the settings screen.
     /// </summary>
     private static void ApplySettingsButtonStyle(Button button)
@@ -865,25 +831,25 @@ public partial class Main : Control
     }
 
     /// <summary>
-    /// Updates the draft inhalation duration without applying it to the active settings yet.
+    /// Updates the inhalation duration and saves the change immediately.
     /// </summary>
     private void AdjustInhaleDuration(double delta)
     {
         _draftInhaleDuration = BreathingSettings.ClampDuration(_draftInhaleDuration + delta);
-        UpdateTexts();
+        ApplyCurrentSettingsImmediately();
     }
 
     /// <summary>
-    /// Updates the draft exhalation duration without applying it to the active settings yet.
+    /// Updates the exhalation duration and saves the change immediately.
     /// </summary>
     private void AdjustExhaleDuration(double delta)
     {
         _draftExhaleDuration = BreathingSettings.ClampDuration(_draftExhaleDuration + delta);
-        UpdateTexts();
+        ApplyCurrentSettingsImmediately();
     }
 
     /// <summary>
-    /// Updates the draft session duration when the whole-minute slider changes.
+    /// Updates and saves the session duration when the whole-minute slider changes.
     /// </summary>
     private void OnSessionDurationSliderValueChanged(double value)
     {
@@ -902,35 +868,36 @@ public partial class Main : Control
             _isUpdatingSettingsControls = false;
         }
 
-        UpdateTexts();
+        ApplyCurrentSettingsImmediately();
     }
 
     /// <summary>
-    /// Selects the previous draft theme without applying it to the main screen yet.
+    /// Selects, applies, and saves the previous theme.
     /// </summary>
     private void SelectPreviousTheme()
     {
         _draftThemeIndex = WrapThemeIndex(_draftThemeIndex - 1);
-        UpdateTexts();
+        ApplyCurrentSettingsImmediately();
     }
 
     /// <summary>
-    /// Selects the next draft theme without applying it to the main screen yet.
+    /// Selects, applies, and saves the next theme.
     /// </summary>
     private void SelectNextTheme()
     {
         _draftThemeIndex = WrapThemeIndex(_draftThemeIndex + 1);
-        UpdateTexts();
+        ApplyCurrentSettingsImmediately();
     }
 
     /// <summary>
-    /// Applies all draft settings and returns to the main screen.
+    /// Copies the current settings-screen values into the active settings model and persists them.
     /// </summary>
     /// <remarks>
-    /// Timing changes reset the current session progress so the breathing cycle and
-    /// session progress bar start from a coherent state.
+    /// The app uses immediate-save behavior on mobile: changing a setting applies
+    /// it directly. Timing changes reset the current session progress so the gauge
+    /// and progress bar remain coherent.
     /// </remarks>
-    private void SaveSettings()
+    private void ApplyCurrentSettingsImmediately()
     {
         bool timingChanged =
             Math.Abs(_settings.InhaleDuration - _draftInhaleDuration) > 0.001 ||
@@ -947,26 +914,13 @@ public partial class Main : Control
             ResetSessionProgress();
         }
 
-        // Persist only after the user explicitly validates the draft values.
-        // The file is written under user://, which maps to an app-specific
-        // writable location on Android.
         SettingsStorage.Save(_settings);
-
         ApplyColors();
-        ShowMainScreen();
+        UpdateTexts();
     }
 
     /// <summary>
-    /// Discards draft setting changes and returns to the main screen.
-    /// </summary>
-    private void CancelSettings()
-    {
-        ResetDraftSettingsFromCurrent();
-        ShowMainScreen();
-    }
-
-    /// <summary>
-    /// Copies active settings into the draft values shown on the settings screen.
+    /// Copies active settings into the working values shown on the settings screen.
     /// </summary>
     private void ResetDraftSettingsFromCurrent()
     {
@@ -1083,7 +1037,7 @@ public partial class Main : Control
     }
 
     /// <summary>
-    /// Opens the settings screen and initializes draft values from the active settings.
+    /// Opens the settings screen and initializes its controls from the active settings.
     /// </summary>
     private void ShowSettingsScreen()
     {
@@ -1372,11 +1326,6 @@ public partial class Main : Control
             button.AddThemeColorOverride("font_color", color);
             button.AddThemeColorOverride("font_hover_color", color);
             button.AddThemeColorOverride("font_pressed_color", color);
-        }
-        else if (node is FloppyIcon floppyIcon)
-        {
-            floppyIcon.IconColor = color;
-            floppyIcon.QueueRedraw();
         }
 
         foreach (Node child in node.GetChildren())
