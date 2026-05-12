@@ -78,6 +78,25 @@ stretch aspect : expand
 
 This matches a phone-oriented vertical layout.
 
+### Android system bars
+
+SimpleBreathing should behave more like a small utility app than a fullscreen game on Android. The Android status/navigation system bars should stay visible so the user can leave the app normally with the Home button/gesture area.
+
+For the preferred modern Android look, the navigation/status bars are visible but translucent, and the app background extends behind them. Interactive controls should **not** be placed under those bars.
+
+In the Android export preset, use:
+
+```text
+Options > Screen > Immersive Mode : Off
+Options > Screen > Edge to Edge   : On
+```
+
+`export_presets.cfg` is currently ignored by Git, so this setting may exist only in the local Godot export preset and may not appear in repository zips.
+
+As a safety net, `Main.cs` calls `EnsureAndroidSystemBarsVisible()` on startup when running on Android. This forces the main window back to windowed mode if a local export preset still starts the app in immersive fullscreen.
+
+When Edge to Edge is enabled, `Main.cs` also applies safe-area margins through `DisplayServer.GetDisplaySafeArea()`. The full-screen background still fills the whole window, including the translucent system-bar areas, but buttons and sliders remain inside the safe area.
+
 ## Main scene
 
 ### `scenes/Main.tscn`
@@ -120,6 +139,7 @@ Responsibilities:
 - show the completion fade overlay when a session ends naturally;
 - apply color themes to the main screen;
 - keep the settings screen readable with a neutral black-and-white style;
+- keep interactive controls inside mobile safe areas when Android Edge to Edge is enabled;
 - use localized labels through `AppLocalization`.
 
 The controller methods are documented with XML comments. Short inline comments are also used for non-trivial layout and state-management details.
@@ -927,3 +947,57 @@ Possible next steps:
 - prepare Android export;
 - optionally refine the completion fade timing after testing on a phone;
 - optionally add haptic feedback or sound, if it remains calm and unobtrusive.
+
+## Android export notes from latest test discussion
+
+### Android .NET target
+
+With Godot 4.6.2 .NET export templates, Android exports require the project to target `net9.0` for Android.
+
+The project file therefore keeps `net8.0` as the default target for the editor and desktop builds, but overrides the target framework to `net9.0` only when Godot exports to Android:
+
+```xml
+<TargetFramework>net8.0</TargetFramework>
+<TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
+```
+
+This avoids the Android export error:
+
+```text
+C# project targets 'net8.0' but the export template only supports 'net9.0'.
+```
+
+### Android system bars
+
+The intended Android behavior is:
+
+- system navigation bar visible;
+- navigation bar area visually transparent / matching the app background;
+- interactive UI kept inside the safe area, not hidden below Android system controls.
+
+Recommended Android export preset settings:
+
+```text
+Screen > Immersive Mode : Off
+Screen > Edge to Edge   : On
+```
+
+`Main.cs` keeps the Android system bars visible at runtime and applies safe-area margins so buttons and sliders stay away from translucent system bars.
+
+### Godot startup logo
+
+The Godot boot splash image is not mandatory. It can be disabled manually in:
+
+```text
+Project Settings > Application > Boot Splash
+```
+
+Recommended values:
+
+```text
+Show Image = Off
+Minimum Display Time = 0
+BG Color = close to the app background color
+```
+
+The Android launcher icon may still appear very briefly during the OS-level startup screen. To avoid seeing the Godot icon there, set custom Android launcher icons in the Android export preset.

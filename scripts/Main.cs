@@ -48,6 +48,11 @@ public partial class Main : Control
     private Control _topActionRow = null!;
     private Control _bottomControls = null!;
 
+    // Margins that hold interactive content inside Android/iOS safe areas while
+    // the full-screen background can still extend behind translucent system bars.
+    private MarginContainer _mainScreenMargin = null!;
+    private MarginContainer _settingsScreenMargin = null!;
+
     // Pause-only information shown above the gauge.
     private Label _pauseElapsedLabel = null!;
     private Control _pauseProgressBar = null!;
@@ -94,17 +99,42 @@ public partial class Main : Control
     /// </summary>
     public override void _Ready()
     {
+        // Android export presets can enable immersive fullscreen mode, which hides
+        // the system navigation bar. SimpleBreathing is closer to a small utility
+        // app than to a game, so keep Android system bars visible by default.
+        EnsureAndroidSystemBarsVisible();
+
         // Load persisted values before building the UI so labels, sliders, and
         // colors start with the previously saved settings on every platform.
         SettingsStorage.Load(_settings);
 
         BuildInterface();
+        Resized += UpdateSafeAreaMargins;
+        UpdateSafeAreaMargins();
         ResetDraftSettingsFromCurrent();
         ApplyColors();
         UpdateTexts();
         UpdateGauge();
         UpdatePauseProgressDisplay();
         UpdateMainScreenVisibility();
+    }
+
+    /// <summary>
+    /// Keeps the Android status and navigation bars visible.
+    /// </summary>
+    /// <remarks>
+    /// The Android export preset also has a Screen > Immersive Mode option.
+    /// Disabling it there is the cleanest fix. This runtime call is a small
+    /// safety net if the local export preset is still configured as fullscreen.
+    /// </remarks>
+    private static void EnsureAndroidSystemBarsVisible()
+    {
+        if (OS.GetName() != "Android")
+        {
+            return;
+        }
+
+        DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
     }
 
     /// <summary>
@@ -177,6 +207,98 @@ public partial class Main : Control
     }
 
     /// <summary>
+    /// Keeps interactive UI away from Android/iOS system bars and notches.
+    /// </summary>
+    /// <remarks>
+    /// This is mainly useful when Android export option Screen > Edge to Edge is
+    /// enabled: the background may draw behind translucent system bars, but the
+    /// actual buttons and sliders should remain inside the safe area.
+    /// </remarks>
+    private void UpdateSafeAreaMargins()
+    {
+        if (_mainScreenMargin == null || _settingsScreenMargin == null)
+        {
+            return;
+        }
+
+        var safeMargins = GetSafeAreaMarginsInViewportUnits();
+
+        ApplyMarginOverrides(
+            _mainScreenMargin,
+            left: 24 + safeMargins.X,
+            top: 16 + safeMargins.Y,
+            right: 24 + safeMargins.Z,
+            bottom: 24 + safeMargins.W);
+
+        ApplyMarginOverrides(
+            _settingsScreenMargin,
+            left: 24 + safeMargins.X,
+            top: 24 + safeMargins.Y,
+            right: 24 + safeMargins.Z,
+            bottom: 24 + safeMargins.W);
+
+        if (_topActionRow != null)
+        {
+            _topActionRow.Position = new Vector2(20 + safeMargins.X, 16 + safeMargins.Y);
+        }
+    }
+
+    /// <summary>
+    /// Converts the native display safe area from physical pixels to Godot viewport units.
+    /// </summary>
+    private Vector4 GetSafeAreaMarginsInViewportUnits()
+    {
+        var osName = OS.GetName();
+        if (osName != "Android" && osName != "iOS")
+        {
+            return Vector4.Zero;
+        }
+
+        var viewportSize = GetViewportRect().Size;
+        var windowSize = DisplayServer.WindowGetSize();
+        if (viewportSize.X <= 0.0f || viewportSize.Y <= 0.0f || windowSize.X <= 0 || windowSize.Y <= 0)
+        {
+            return Vector4.Zero;
+        }
+
+        var safeArea = DisplayServer.GetDisplaySafeArea();
+        if (safeArea.Size.X <= 0 || safeArea.Size.Y <= 0)
+        {
+            return Vector4.Zero;
+        }
+
+        var leftPixels = Math.Max(0, safeArea.Position.X);
+        var topPixels = Math.Max(0, safeArea.Position.Y);
+        var rightPixels = Math.Max(0, windowSize.X - (safeArea.Position.X + safeArea.Size.X));
+        var bottomPixels = Math.Max(0, windowSize.Y - (safeArea.Position.Y + safeArea.Size.Y));
+
+        var scaleX = viewportSize.X / windowSize.X;
+        var scaleY = viewportSize.Y / windowSize.Y;
+
+        return new Vector4(
+            leftPixels * scaleX,
+            topPixels * scaleY,
+            rightPixels * scaleX,
+            bottomPixels * scaleY);
+    }
+
+    /// <summary>
+    /// Applies integer margin constants to a MarginContainer.
+    /// </summary>
+    private static void ApplyMarginOverrides(MarginContainer margin, float left, float top, float right, float bottom)
+    {
+        margin.AddThemeConstantOverride("margin_left", ToMarginConstant(left));
+        margin.AddThemeConstantOverride("margin_top", ToMarginConstant(top));
+        margin.AddThemeConstantOverride("margin_right", ToMarginConstant(right));
+        margin.AddThemeConstantOverride("margin_bottom", ToMarginConstant(bottom));
+    }
+
+    private static int ToMarginConstant(float value)
+    {
+        return Math.Max(0, (int)Math.Round(value));
+    }
+
+    /// <summary>
     /// Builds the full-screen overlay used to softly end a completed session.
     /// </summary>
     /// <remarks>
@@ -244,16 +366,12 @@ public partial class Main : Control
             Name = "MainScreen"
         };
 
-        var margin = new MarginContainer
+        _mainScreenMargin = new MarginContainer
         {
             Name = "MainScreenMargin"
         };
-        margin.AddThemeConstantOverride("margin_left", 24);
-        margin.AddThemeConstantOverride("margin_top", 16);
-        margin.AddThemeConstantOverride("margin_right", 24);
-        margin.AddThemeConstantOverride("margin_bottom", 24);
-        root.AddChild(margin);
-        FillParent(margin);
+        root.AddChild(_mainScreenMargin);
+        FillParent(_mainScreenMargin);
 
         var mainColumn = new VBoxContainer
         {
@@ -262,7 +380,7 @@ public partial class Main : Control
             SizeFlagsVertical = SizeFlags.ExpandFill
         };
         mainColumn.AddThemeConstantOverride("separation", 8);
-        margin.AddChild(mainColumn);
+        _mainScreenMargin.AddChild(mainColumn);
 
         // Keep the settings button as an overlay instead of placing it in the
         // vertical layout. This prevents it from pushing the gauge downward.
@@ -462,16 +580,12 @@ public partial class Main : Control
         root.AddChild(background);
         FillParent(background);
 
-        var margin = new MarginContainer
+        _settingsScreenMargin = new MarginContainer
         {
             Name = "SettingsScreen"
         };
-        margin.AddThemeConstantOverride("margin_left", 24);
-        margin.AddThemeConstantOverride("margin_top", 24);
-        margin.AddThemeConstantOverride("margin_right", 24);
-        margin.AddThemeConstantOverride("margin_bottom", 24);
-        root.AddChild(margin);
-        FillParent(margin);
+        root.AddChild(_settingsScreenMargin);
+        FillParent(_settingsScreenMargin);
 
         var column = new VBoxContainer
         {
@@ -480,7 +594,7 @@ public partial class Main : Control
             SizeFlagsVertical = SizeFlags.ExpandFill
         };
         column.AddThemeConstantOverride("separation", 18);
-        margin.AddChild(column);
+        _settingsScreenMargin.AddChild(column);
 
         var headerRow = new HBoxContainer
         {
