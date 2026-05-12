@@ -12,15 +12,17 @@ public partial class Main : Control
     private readonly BreathingSettings _settings = new();
 
     private BreathingGauge _gauge = null!;
-    private Label _phaseLabel = null!;
-    private Label _durationLabel = null!;
+    private Label _inhaleValueLabel = null!;
+    private Label _exhaleValueLabel = null!;
     private Label _themeLabel = null!;
-    private Button _pauseButton = null!;
+    private Button _startPauseButton = null!;
     private ColorRect _background = null!;
+    private Control _mainScreen = null!;
+    private Control _settingsScreen = null!;
 
     private BreathingPhase _currentPhase = BreathingPhase.Inhale;
     private double _phaseElapsed;
-    private bool _isPaused;
+    private bool _isRunning;
 
     public override void _Ready()
     {
@@ -32,23 +34,21 @@ public partial class Main : Control
 
     public override void _Process(double delta)
     {
-        if (_isPaused)
+        if (!_isRunning)
         {
             return;
         }
 
         _phaseElapsed += delta;
-        double phaseDuration = GetCurrentPhaseDuration();
 
-        if (_phaseElapsed >= phaseDuration)
+        while (_phaseElapsed >= GetCurrentPhaseDuration())
         {
-            _phaseElapsed -= phaseDuration;
+            _phaseElapsed -= GetCurrentPhaseDuration();
             _currentPhase = _currentPhase == BreathingPhase.Inhale
                 ? BreathingPhase.Exhale
                 : BreathingPhase.Inhale;
         }
 
-        UpdateTexts();
         UpdateGauge();
     }
 
@@ -62,16 +62,26 @@ public partial class Main : Control
         AddChild(_background);
         FillParent(_background);
 
+        _mainScreen = BuildMainScreen();
+        AddChild(_mainScreen);
+        FillParent((Control)_mainScreen);
+
+        _settingsScreen = BuildSettingsScreen();
+        _settingsScreen.Visible = false;
+        AddChild(_settingsScreen);
+        FillParent((Control)_settingsScreen);
+    }
+
+    private Control BuildMainScreen()
+    {
         var margin = new MarginContainer
         {
-            Name = "MainMargin"
+            Name = "MainScreen"
         };
         margin.AddThemeConstantOverride("margin_left", 24);
         margin.AddThemeConstantOverride("margin_top", 24);
         margin.AddThemeConstantOverride("margin_right", 24);
         margin.AddThemeConstantOverride("margin_bottom", 24);
-        AddChild(margin);
-        FillParent(margin);
 
         var mainColumn = new VBoxContainer
         {
@@ -79,98 +89,165 @@ public partial class Main : Control
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             SizeFlagsVertical = SizeFlags.ExpandFill
         };
-        mainColumn.AddThemeConstantOverride("separation", 14);
+        mainColumn.AddThemeConstantOverride("separation", 18);
         margin.AddChild(mainColumn);
-
-        var titleLabel = new Label
-        {
-            Name = "TitleLabel",
-            Text = "Simple Breathing",
-            HorizontalAlignment = Godot.HorizontalAlignment.Center
-        };
-        titleLabel.AddThemeFontSizeOverride("font_size", 30);
-        mainColumn.AddChild(titleLabel);
-
-        _phaseLabel = new Label
-        {
-            Name = "PhaseLabel",
-            HorizontalAlignment = Godot.HorizontalAlignment.Center
-        };
-        _phaseLabel.AddThemeFontSizeOverride("font_size", 24);
-        mainColumn.AddChild(_phaseLabel);
 
         _gauge = new BreathingGauge
         {
             Name = "BreathingGauge",
-            CustomMinimumSize = new Vector2(260, 360),
+            CustomMinimumSize = new Vector2(260, 520),
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             SizeFlagsVertical = SizeFlags.ExpandFill
         };
         mainColumn.AddChild(_gauge);
 
-        _durationLabel = new Label
+        var bottomRow = new HBoxContainer
         {
-            Name = "DurationLabel",
-            HorizontalAlignment = Godot.HorizontalAlignment.Center
-        };
-        _durationLabel.AddThemeFontSizeOverride("font_size", 18);
-        mainColumn.AddChild(_durationLabel);
-
-        var controls = new VBoxContainer
-        {
-            Name = "Controls",
-            SizeFlagsHorizontal = SizeFlags.ExpandFill
-        };
-        controls.AddThemeConstantOverride("separation", 8);
-        mainColumn.AddChild(controls);
-
-        var inhaleRow = CreateButtonRow(
-            "Inspiration",
-            () => AdjustInhaleDuration(-BreathingSettings.DurationStep),
-            () => AdjustInhaleDuration(BreathingSettings.DurationStep));
-        controls.AddChild(inhaleRow);
-
-        var exhaleRow = CreateButtonRow(
-            "Expiration",
-            () => AdjustExhaleDuration(-BreathingSettings.DurationStep),
-            () => AdjustExhaleDuration(BreathingSettings.DurationStep));
-        controls.AddChild(exhaleRow);
-
-        var themeRow = CreateThemeRow();
-        controls.AddChild(themeRow);
-
-        var actionRow = new HBoxContainer
-        {
-            Name = "ActionRow",
+            Name = "BottomActionRow",
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
             Alignment = BoxContainer.AlignmentMode.Center
         };
-        actionRow.AddThemeConstantOverride("separation", 10);
-        controls.AddChild(actionRow);
+        bottomRow.AddThemeConstantOverride("separation", 12);
+        mainColumn.AddChild(bottomRow);
 
-        _pauseButton = CreateButton("Pause", TogglePause);
-        actionRow.AddChild(_pauseButton);
-        actionRow.AddChild(CreateButton("Reset", ResetCycle));
+        _startPauseButton = CreateIconButton("▶", ToggleBreathing);
+        bottomRow.AddChild(_startPauseButton);
+
+        var spacer = new Control
+        {
+            Name = "BottomSpacer",
+            SizeFlagsHorizontal = SizeFlags.ExpandFill
+        };
+        bottomRow.AddChild(spacer);
+
+        bottomRow.AddChild(CreateIconButton("⚙", ShowSettingsScreen));
+
+        return margin;
     }
 
-    private HBoxContainer CreateButtonRow(string labelText, Action decrease, Action increase)
+    private Control BuildSettingsScreen()
+    {
+        var margin = new MarginContainer
+        {
+            Name = "SettingsScreen"
+        };
+        margin.AddThemeConstantOverride("margin_left", 24);
+        margin.AddThemeConstantOverride("margin_top", 24);
+        margin.AddThemeConstantOverride("margin_right", 24);
+        margin.AddThemeConstantOverride("margin_bottom", 24);
+
+        var column = new VBoxContainer
+        {
+            Name = "SettingsColumn",
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill
+        };
+        column.AddThemeConstantOverride("separation", 18);
+        margin.AddChild(column);
+
+        var headerRow = new HBoxContainer
+        {
+            Name = "SettingsHeader",
+            SizeFlagsHorizontal = SizeFlags.ExpandFill
+        };
+        headerRow.AddThemeConstantOverride("separation", 12);
+        column.AddChild(headerRow);
+
+        headerRow.AddChild(CreateIconButton("←", ShowMainScreen));
+
+        var title = new Label
+        {
+            Text = "Réglages",
+            VerticalAlignment = Godot.VerticalAlignment.Center,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill
+        };
+        title.AddThemeFontSizeOverride("font_size", 28);
+        headerRow.AddChild(title);
+
+        column.AddChild(CreateVerticalSpacer(10));
+
+        var breathingTitle = CreateSectionTitle("Respiration");
+        column.AddChild(breathingTitle);
+
+        column.AddChild(CreateDurationRow(
+            "Inspiration",
+            out _inhaleValueLabel,
+            () => AdjustInhaleDuration(-BreathingSettings.DurationStep),
+            () => AdjustInhaleDuration(BreathingSettings.DurationStep)));
+
+        column.AddChild(CreateDurationRow(
+            "Expiration",
+            out _exhaleValueLabel,
+            () => AdjustExhaleDuration(-BreathingSettings.DurationStep),
+            () => AdjustExhaleDuration(BreathingSettings.DurationStep)));
+
+        column.AddChild(CreateVerticalSpacer(10));
+
+        var colorsTitle = CreateSectionTitle("Couleurs");
+        column.AddChild(colorsTitle);
+        column.AddChild(CreateThemeRow());
+
+        var flexibleSpacer = new Control
+        {
+            Name = "SettingsFlexibleSpacer",
+            SizeFlagsVertical = SizeFlags.ExpandFill
+        };
+        column.AddChild(flexibleSpacer);
+
+        var resetRow = new HBoxContainer
+        {
+            Name = "SettingsResetRow",
+            Alignment = BoxContainer.AlignmentMode.Center,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill
+        };
+        resetRow.AddChild(CreateButton("Réinitialiser le cycle", ResetCycle));
+        column.AddChild(resetRow);
+
+        return margin;
+    }
+
+    private Label CreateSectionTitle(string text)
+    {
+        var label = new Label
+        {
+            Text = text,
+            HorizontalAlignment = Godot.HorizontalAlignment.Left
+        };
+        label.AddThemeFontSizeOverride("font_size", 20);
+        return label;
+    }
+
+    private HBoxContainer CreateDurationRow(string labelText, out Label valueLabel, Action decrease, Action increase)
     {
         var row = new HBoxContainer
         {
             Name = labelText + "Row",
-            Alignment = BoxContainer.AlignmentMode.Center
+            Alignment = BoxContainer.AlignmentMode.Center,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
         row.AddThemeConstantOverride("separation", 10);
 
         var label = new Label
         {
             Text = labelText,
-            CustomMinimumSize = new Vector2(110, 0),
+            CustomMinimumSize = new Vector2(120, 0),
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
             VerticalAlignment = Godot.VerticalAlignment.Center
         };
-        label.AddThemeFontSizeOverride("font_size", 16);
-
+        label.AddThemeFontSizeOverride("font_size", 17);
         row.AddChild(label);
+
         row.AddChild(CreateButton("−", decrease));
+
+        valueLabel = new Label
+        {
+            CustomMinimumSize = new Vector2(72, 0),
+            HorizontalAlignment = Godot.HorizontalAlignment.Center,
+            VerticalAlignment = Godot.VerticalAlignment.Center
+        };
+        valueLabel.AddThemeFontSizeOverride("font_size", 17);
+        row.AddChild(valueLabel);
+
         row.AddChild(CreateButton("+", increase));
 
         return row;
@@ -181,29 +258,22 @@ public partial class Main : Control
         var row = new HBoxContainer
         {
             Name = "ThemeRow",
-            Alignment = BoxContainer.AlignmentMode.Center
+            Alignment = BoxContainer.AlignmentMode.Center,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
         row.AddThemeConstantOverride("separation", 10);
-
-        var label = new Label
-        {
-            Text = "Couleurs",
-            CustomMinimumSize = new Vector2(110, 0),
-            VerticalAlignment = Godot.VerticalAlignment.Center
-        };
-        label.AddThemeFontSizeOverride("font_size", 16);
-        row.AddChild(label);
 
         row.AddChild(CreateButton("‹", SelectPreviousTheme));
 
         _themeLabel = new Label
         {
             Name = "ThemeLabel",
-            CustomMinimumSize = new Vector2(128, 0),
+            CustomMinimumSize = new Vector2(180, 0),
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
             HorizontalAlignment = Godot.HorizontalAlignment.Center,
             VerticalAlignment = Godot.VerticalAlignment.Center
         };
-        _themeLabel.AddThemeFontSizeOverride("font_size", 15);
+        _themeLabel.AddThemeFontSizeOverride("font_size", 17);
         row.AddChild(_themeLabel);
 
         row.AddChild(CreateButton("›", SelectNextTheme));
@@ -216,22 +286,44 @@ public partial class Main : Control
         var button = new Button
         {
             Text = text,
-            CustomMinimumSize = new Vector2(82, 42)
+            CustomMinimumSize = new Vector2(88, 44)
         };
         button.Pressed += onPressed;
         return button;
+    }
+
+    private Button CreateIconButton(string text, Action onPressed)
+    {
+        var button = new Button
+        {
+            Text = text,
+            CustomMinimumSize = new Vector2(64, 56)
+        };
+        button.AddThemeFontSizeOverride("font_size", 24);
+        button.Pressed += onPressed;
+        return button;
+    }
+
+    private Control CreateVerticalSpacer(float height)
+    {
+        return new Control
+        {
+            CustomMinimumSize = new Vector2(0, height)
+        };
     }
 
     private void AdjustInhaleDuration(double delta)
     {
         _settings.InhaleDuration = BreathingSettings.ClampDuration(_settings.InhaleDuration + delta);
         ResetCycle();
+        UpdateTexts();
     }
 
     private void AdjustExhaleDuration(double delta)
     {
         _settings.ExhaleDuration = BreathingSettings.ClampDuration(_settings.ExhaleDuration + delta);
         ResetCycle();
+        UpdateTexts();
     }
 
     private void SelectPreviousTheme()
@@ -248,10 +340,25 @@ public partial class Main : Control
         UpdateTexts();
     }
 
-    private void TogglePause()
+    private void ToggleBreathing()
     {
-        _isPaused = !_isPaused;
-        _pauseButton.Text = _isPaused ? "Reprendre" : "Pause";
+        _isRunning = !_isRunning;
+        UpdateTexts();
+    }
+
+    private void ShowSettingsScreen()
+    {
+        _isRunning = false;
+        UpdateTexts();
+
+        _mainScreen.Visible = false;
+        _settingsScreen.Visible = true;
+    }
+
+    private void ShowMainScreen()
+    {
+        _settingsScreen.Visible = false;
+        _mainScreen.Visible = true;
         UpdateTexts();
     }
 
@@ -259,8 +366,8 @@ public partial class Main : Control
     {
         _currentPhase = BreathingPhase.Inhale;
         _phaseElapsed = 0.0;
-        UpdateTexts();
         UpdateGauge();
+        UpdateTexts();
     }
 
     private double GetCurrentPhaseDuration()
@@ -272,13 +379,25 @@ public partial class Main : Control
 
     private void UpdateTexts()
     {
-        string phaseName = _currentPhase == BreathingPhase.Inhale ? "Inspiration" : "Expiration";
-        double remaining = Math.Max(0.0, GetCurrentPhaseDuration() - _phaseElapsed);
-        string pauseSuffix = _isPaused ? " — pause" : string.Empty;
+        if (_startPauseButton != null)
+        {
+            _startPauseButton.Text = _isRunning ? "⏸" : "▶";
+        }
 
-        _phaseLabel.Text = $"{phaseName}{pauseSuffix} · {remaining:0.0}s";
-        _durationLabel.Text = $"Inspiration : {_settings.InhaleDuration:0.0}s   |   Expiration : {_settings.ExhaleDuration:0.0}s";
-        _themeLabel.Text = _settings.CurrentThemeName;
+        if (_inhaleValueLabel != null)
+        {
+            _inhaleValueLabel.Text = $"{_settings.InhaleDuration:0.0}s";
+        }
+
+        if (_exhaleValueLabel != null)
+        {
+            _exhaleValueLabel.Text = $"{_settings.ExhaleDuration:0.0}s";
+        }
+
+        if (_themeLabel != null)
+        {
+            _themeLabel.Text = _settings.CurrentThemeName;
+        }
     }
 
     private void UpdateGauge()

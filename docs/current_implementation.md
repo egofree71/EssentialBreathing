@@ -1,19 +1,18 @@
 # SimpleBreathing — implémentation actuelle
 
-## Version
+## Objectif
 
-Package 02 — Thèmes de couleurs.
+Application Android très simple de respiration réalisée avec Godot 4.6.2 et C#.
 
-Objectif : garder la base fonctionnelle du Package 01, puis ajouter un premier réglage visuel simple permettant de changer rapidement l'ambiance de l'application.
+L'application affiche une jauge verticale avec une boule qui monte pendant l'inspiration et descend pendant l'expiration. L'utilisateur peut modifier les durées d'inspiration et d'expiration, ainsi que le thème de couleurs.
 
-## Structure actuelle
+## Structure du projet
 
 ```text
 SimpleBreathing/
 ├── project.godot
 ├── SimpleBreathing.csproj
 ├── SimpleBreathing.sln
-├── README.md
 ├── scenes/
 │   └── Main.tscn
 ├── scripts/
@@ -24,15 +23,19 @@ SimpleBreathing/
     └── current_implementation.md
 ```
 
-## Scènes
+## Scène principale
 
 ### `scenes/Main.tscn`
 
-Scène principale du projet.
+Scène racine de type `Control`.
 
-- Noeud racine : `Control`.
-- Script attaché : `scripts/Main.cs`.
-- L'interface est encore créée en code pour garder le prototype très facile à modifier.
+Elle utilise le script :
+
+```text
+res://scripts/Main.cs
+```
+
+La scène est volontairement presque vide dans l'éditeur Godot. L'interface est construite par code dans `Main.cs`, afin de pouvoir itérer rapidement sur la structure de l'application.
 
 ## Scripts
 
@@ -40,36 +43,84 @@ Scène principale du projet.
 
 Script principal de l'application.
 
-Responsabilités actuelles :
+Responsabilités :
 
-- crée l'interface utilisateur au lancement ;
-- gère le cycle inspiration / expiration ;
-- met à jour le texte affiché ;
-- met à jour la position visuelle de la boule dans la jauge ;
-- permet de modifier temporairement les durées avec des boutons ;
-- permet de mettre en pause et de réinitialiser le cycle ;
-- permet de changer de thème de couleurs avec les boutons `‹` et `›`.
+- construire l'interface ;
+- gérer l'écran principal ;
+- gérer l'écran des réglages ;
+- gérer le cycle inspiration / expiration ;
+- démarrer et mettre en pause l'animation ;
+- appliquer les réglages de durée ;
+- appliquer les thèmes de couleurs.
 
-Le cycle actuel est volontairement simple :
+### Écran principal
 
-1. inspiration : la boule monte progressivement de bas en haut ;
-2. expiration : la boule descend progressivement de haut en bas ;
-3. le cycle recommence.
+Au lancement, l'application affiche uniquement :
 
-Les durées par défaut sont :
+- la jauge verticale ;
+- la boule de respiration ;
+- un bouton de démarrage en bas à gauche ;
+- un bouton de réglages en bas à droite.
 
-- inspiration : 4 secondes ;
-- expiration : 4 secondes.
+Le titre `Simple Breathing` n'est plus affiché.
 
-### `scripts/BreathingGauge.cs`
+Les réglages ne sont plus visibles sur l'écran principal.
 
-Contrôle visuel personnalisé qui dessine :
+Le bouton de démarrage affiche :
 
-- une jauge verticale ;
-- une boule ;
-- deux petits repères haut/bas.
+```text
+▶
+```
 
-La méthode principale est :
+Quand l'animation est en cours, le bouton devient :
+
+```text
+⏸
+```
+
+### Écran des réglages
+
+Le bouton de réglages affiche :
+
+```text
+⚙
+```
+
+Il ouvre un écran séparé avec :
+
+- un bouton retour ;
+- les réglages de durée d'inspiration ;
+- les réglages de durée d'expiration ;
+- le choix du thème de couleurs ;
+- un bouton pour réinitialiser le cycle.
+
+Quand on ouvre l'écran des réglages, l'animation est mise en pause. Cela évite que la respiration continue en arrière-plan pendant que l'utilisateur modifie les paramètres.
+
+### Cycle de respiration
+
+Le cycle alterne entre deux phases :
+
+```csharp
+Inhale
+Exhale
+```
+
+Pendant l'inspiration, la progression visuelle va de `0` à `1` : la boule monte.
+
+Pendant l'expiration, la progression visuelle va de `1` à `0` : la boule descend.
+
+Au lancement, l'application est arrêtée et la boule est en bas.
+
+## `scripts/BreathingGauge.cs`
+
+Contrôle personnalisé qui dessine :
+
+- la jauge verticale ;
+- le contour de la jauge ;
+- la boule ;
+- deux petits repères visuels en haut et en bas.
+
+La méthode importante est :
 
 ```csharp
 SetProgress(float progress)
@@ -77,82 +128,75 @@ SetProgress(float progress)
 
 Avec :
 
-- `0` = boule en bas ;
-- `1` = boule en haut.
+- `0.0` : boule en bas ;
+- `1.0` : boule en haut.
 
-La jauge reçoit ses couleurs depuis `Main.cs`, qui les lit dans `BreathingSettings`.
+## `scripts/BreathingSettings.cs`
 
-### `scripts/BreathingSettings.cs`
+Contient les paramètres de respiration :
 
-Contient les réglages de base de l'application :
+```csharp
+InhaleDuration
+ExhaleDuration
+```
 
-- durée d'inspiration ;
-- durée d'expiration ;
-- limites minimales et maximales des durées ;
-- liste de thèmes de couleurs ;
-- thème courant.
+Valeurs actuelles :
 
-Les thèmes actuellement disponibles sont :
+```text
+Inspiration : 4.0 secondes
+Expiration : 4.0 secondes
+```
 
-- `Océan nocturne` ;
-- `Forêt douce` ;
-- `Crépuscule` ;
-- `Clair minimal`.
+Les durées sont modifiables par pas de :
 
-Pour l'instant, ces réglages ne sont pas encore sauvegardés. Ils existent seulement en mémoire pendant l'exécution.
+```text
+0.5 seconde
+```
 
-## Tests à faire pour ce package
+Limites :
 
-### Test 1 — remplacement des fichiers
+```text
+Minimum : 1.0 seconde
+Maximum : 20.0 secondes
+```
 
-1. Copier les fichiers du package à la racine du dépôt.
-2. Accepter le remplacement des fichiers existants.
-3. Ouvrir le projet avec Godot Engine .NET 4.6.2.
+## Thèmes de couleurs
 
-Résultat attendu : le projet s'ouvre sans erreur majeure.
+Les thèmes disponibles sont définis dans `BreathingSettings.cs` :
 
-### Test 2 — compilation C#
+```text
+Océan nocturne
+Forêt douce
+Crépuscule
+Clair minimal
+```
 
-1. Cliquer sur **Build** dans Godot.
+Chaque thème définit :
 
-Résultat attendu : le projet compile sans erreur.
+- couleur de fond ;
+- couleur du texte ;
+- couleur de la jauge ;
+- couleur du bord de jauge ;
+- couleur de la boule.
 
-### Test 3 — lancement
+## État actuel
 
-1. Lancer le projet avec **F5**.
+Fonctionnel :
 
-Résultat attendu :
+- projet Godot C# minimal ;
+- scène principale configurée ;
+- jauge dessinée par code ;
+- boule animée ;
+- démarrage / pause depuis l'écran principal ;
+- écran de réglages séparé ;
+- réglage des durées ;
+- changement de thème ;
+- documentation de l'implémentation actuelle.
 
-- l'application démarre comme avant ;
-- la boule monte et descend ;
-- les boutons de durée fonctionnent ;
-- les boutons `Pause` et `Reset` fonctionnent.
+À faire plus tard :
 
-### Test 4 — changement de couleurs
-
-1. Cliquer sur `›` dans la ligne `Couleurs`.
-2. Cliquer plusieurs fois pour parcourir les thèmes.
-3. Cliquer sur `‹` pour revenir en arrière.
-
-Résultat attendu :
-
-- le nom du thème change ;
-- le fond change ;
-- les couleurs de la jauge et de la boule changent ;
-- l'animation continue normalement.
-
-### Test 5 — thème clair
-
-1. Aller jusqu'au thème `Clair minimal`.
-2. Vérifier que les textes restent lisibles.
-3. Revenir à un thème sombre.
-
-Résultat attendu : l'interface reste utilisable aussi bien en thème sombre qu'en thème clair.
-
-## Prochaines étapes prévues
-
-1. Sauvegarder localement les durées et le thème choisi.
-2. Ajouter un vrai écran de réglages si l'écran principal devient trop chargé.
-3. Ajouter éventuellement une petite pause entre inspiration et expiration.
-4. Préparer l'export Android.
-5. Tester sur téléphone.
+- améliorer l'esthétique générale ;
+- sauvegarder les réglages localement ;
+- ajouter éventuellement un court temps de pause entre inspiration et expiration ;
+- tester sur Android ;
+- préparer l'export Android.
