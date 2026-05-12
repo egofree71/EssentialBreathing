@@ -36,10 +36,44 @@ Implemented:
 - settings persistence through Godot `user://settings.cfg`;
 - selectable visual themes;
 - neutral black-and-white settings screen for readability;
+- clearer button styling for light themes;
+- improved readability for settings symbols and navigation arrows;
 - basic localization in English, French, and Spanish;
 - completion overlay with fade out / fade in and localized completion message;
 - Android/mobile screen kept awake while a breathing session is active;
+- Android navigation bar kept visible, with edge-to-edge safe area handling;
 - documented `Main.cs` controller methods.
+
+## Requirements
+
+Recommended setup:
+
+- Godot **4.6.2** .NET version;
+- C# / .NET support enabled in Godot;
+- .NET SDK **9.x** installed for Android export;
+- Android export templates installed in Godot;
+- Android Studio / Android SDK configured locally for Android builds.
+
+## Android export notes
+
+For Android export, the project keeps the default desktop/editor target on `net8.0`, but switches to `net9.0` when Godot exports to Android.
+
+Recommended Android export settings:
+
+```text
+Project > Export > Android > Options > Screen
+
+Immersive Mode: Off
+Edge to Edge: On
+```
+
+With this setup, the Android navigation bar remains visible while the app keeps its background behind the system bar. The UI is adjusted using the Android safe area so controls are not placed under the navigation bar.
+
+Detailed Android notes are available in:
+
+```text
+docs/android_export_notes.md
+```
 
 ## Technical documentation
 
@@ -47,6 +81,9 @@ See:
 
 ```text
 docs/current_implementation.md
+docs/android_export_notes.md
 ```
 
-This file describes the current architecture, scenes, scripts, UI behavior, and implementation details.
+`docs/current_implementation.md` describes the current architecture, scenes, scripts, UI behavior, and implementation details.
+
+`docs/android_export_notes.md` documents Android-specific export notes, .NET 9 requirements, system bar settings, and boot splash options.
