@@ -1,14 +1,14 @@
-# SimpleBreathing — implémentation actuelle
+# SimpleBreathing — Current Implementation
 
-## Objectif
+## Goal
 
-SimpleBreathing est une application Android très simple de respiration réalisée avec Godot 4.6.2 et C#.
+SimpleBreathing is a very simple Android breathing app built with Godot 4.6.2 and C#.
 
-L'application affiche une jauge verticale avec une boule qui monte pendant l'inspiration et descend pendant l'expiration.
+The app displays a vertical gauge with a ball that moves upward during inhalation and downward during exhalation.
 
-L'objectif actuel est de garder une interface mobile très sobre : au lancement, l'utilisateur voit uniquement la jauge, la boule, un bouton pour démarrer ou mettre en pause, et un bouton pour ouvrir les réglages.
+The current goal is to keep the mobile interface very minimal: when the app starts, the user only sees the gauge, the ball, a start/pause button, and a button to open the settings screen.
 
-## Structure du projet
+## Project structure
 
 ```text
 SimpleBreathing/
@@ -26,21 +26,21 @@ SimpleBreathing/
     └── current_implementation.md
 ```
 
-## Scène principale
+## Main scene
 
 ### `scenes/Main.tscn`
 
-Scène racine de type `Control`.
+Root scene of type `Control`.
 
-Elle utilise le script :
+It uses the following script:
 
 ```text
 res://scripts/Main.cs
 ```
 
-La scène reste volontairement très simple dans l'éditeur Godot. L'interface est construite par code dans `Main.cs`, ce qui permet d'itérer rapidement sur la structure de l'application.
+The scene is intentionally kept very simple in the Godot editor. The interface is built in code inside `Main.cs`, which makes it easier to iterate quickly on the application structure.
 
-La scène principale est configurée dans `project.godot` :
+The main scene is configured in `project.godot`:
 
 ```text
 res://scenes/Main.tscn
@@ -50,82 +50,82 @@ res://scenes/Main.tscn
 
 ## `scripts/Main.cs`
 
-Script principal de l'application.
+Main application script.
 
-Responsabilités :
+Responsibilities:
 
-- construire l'interface par code ;
-- gérer l'écran principal ;
-- gérer l'écran des réglages ;
-- gérer le cycle inspiration / expiration ;
-- démarrer et mettre en pause l'animation ;
-- réinitialiser le cycle ;
-- appliquer les réglages de durée ;
-- appliquer les thèmes de couleurs.
+- build the interface in code;
+- manage the main screen;
+- manage the settings screen;
+- manage the inhalation/exhalation cycle;
+- start and pause the animation;
+- reset the cycle;
+- apply duration settings;
+- apply color themes.
 
-### Écran principal
+### Main screen
 
-Au lancement, l'application affiche uniquement :
+When the app starts, it only displays:
 
-- la jauge verticale ;
-- la boule de respiration ;
-- un bouton démarrer / pause en bas à gauche ;
-- un bouton de réglages en bas à droite.
+- the vertical gauge;
+- the breathing ball;
+- a start/pause button at the bottom left;
+- a settings button at the bottom right.
 
-Le titre `Simple Breathing` n'est plus affiché.
+The `Simple Breathing` title is no longer displayed.
 
-Les réglages ne sont plus visibles sur l'écran principal.
+The settings are no longer visible on the main screen.
 
-Le bouton de démarrage affiche :
+The start button displays:
 
 ```text
 ▶
 ```
 
-Quand l'animation est en cours, le bouton devient :
+When the animation is running, the button becomes:
 
 ```text
 ⏸
 ```
 
-Les icônes du bouton démarrer / pause ont été agrandies pour être plus lisibles sur mobile.
+The start/pause icons have been enlarged to improve readability on mobile.
 
-Le bouton de réglages affiche :
+The settings button displays:
 
 ```text
 ⚙
 ```
 
-### Écran des réglages
+### Settings screen
 
-Le bouton `⚙` ouvre un écran séparé avec :
+The `⚙` button opens a separate settings screen with:
 
-- un bouton retour ;
-- les réglages de durée d'inspiration ;
-- les réglages de durée d'expiration ;
-- le choix du thème de couleurs ;
-- un bouton pour réinitialiser le cycle.
+- a back button;
+- inhalation duration controls;
+- exhalation duration controls;
+- color theme selection;
+- a button to reset the breathing cycle.
 
-Quand on ouvre l'écran des réglages, l'animation est mise en pause.
+When the settings screen is opened, the animation is paused.
 
-Cela évite que la respiration continue en arrière-plan pendant que l'utilisateur modifie les paramètres.
+This prevents the breathing cycle from continuing in the background while the user changes settings.
 
-### Cycle de respiration
+### Breathing cycle
 
-Le cycle alterne entre deux phases :
+The cycle alternates between two phases:
 
 ```csharp
 Inhale
 Exhale
 ```
 
-Pendant l'inspiration, la progression visuelle va de `0` à `1` : la boule monte.
+During inhalation, the visual progress goes from `0` to `1`: the ball moves upward.
 
-Pendant l'expiration, la progression visuelle va de `1` à `0` : la boule descend.
+During exhalation, the visual progress goes from `1` to `0`: the ball moves downward.
 
-Au lancement, l'application est arrêtée et la boule est en bas.
+When the app starts, it is stopped and the ball is at the bottom.
 
-La progression de la boule est envoyée à la jauge avec :
+The ball progress is sent to the gauge with:
 
 ```csharp
 _gauge.SetProgress(visualProgress);
@@ -133,84 +133,84 @@ _gauge.SetProgress(visualProgress);
 
 ## `scripts/BreathingGauge.cs`
 
-Contrôle personnalisé qui dessine la jauge et la boule.
+Custom control that draws the gauge and the ball.
 
-La jauge est dessinée par code, sans texture externe.
+The gauge is drawn in code, without external textures.
 
-### Forme de la jauge
+### Gauge shape
 
-La jauge a maintenant une forme de capsule verticale :
+The gauge now has a vertical capsule shape:
 
-- rectangle central ;
-- demi-cercle arrondi en haut ;
-- demi-cercle arrondi en bas.
+- central rectangle;
+- rounded upper half-circle;
+- rounded lower half-circle.
 
-Techniquement, elle est dessinée avec :
+Technically, it is drawn with:
 
-- un rectangle central rempli ;
-- un cercle en haut ;
-- un cercle en bas.
+- one filled central rectangle;
+- one circle at the top;
+- one circle at the bottom.
 
-La bordure de couleur différente autour de la jauge a été supprimée.
+The different-colored border around the gauge has been removed.
 
-Les deux petits repères visuels à gauche, en haut et en bas, ont également été supprimés.
+The two small visual markers on the left, at the top and bottom, have also been removed.
 
-### Boule
+### Ball
 
-La boule est dessinée avec `DrawCircle`.
+The ball is drawn with `DrawCircle`.
 
-Elle prend davantage de place dans la jauge qu'au début du projet, avec des marges latérales plus petites.
+It takes up more space inside the gauge than it did at the beginning of the project, with smaller side margins.
 
-La position verticale dépend de la progression :
+Its vertical position depends on the progress value:
 
 ```csharp
 SetProgress(float progress)
 ```
 
-Avec :
+With:
 
 ```text
-0.0 : boule en bas
-1.0 : boule en haut
+0.0 : ball at the bottom
+1.0 : ball at the top
 ```
 
-La progression est limitée entre `0.0` et `1.0` avec `Mathf.Clamp`.
+The progress value is clamped between `0.0` and `1.0` with `Mathf.Clamp`.
 
 ## `scripts/BreathingSettings.cs`
 
-Contient les paramètres de respiration et les thèmes de couleurs.
+Contains breathing parameters and color themes.
 
-### Durées
+### Durations
 
-Paramètres actuels :
-
-```text
-Inspiration : 4.0 secondes
-Expiration : 4.0 secondes
-```
-
-Les durées sont modifiables par pas de :
+Current values:
 
 ```text
-0.5 seconde
+Inhalation : 4.0 seconds
+Exhalation : 4.0 seconds
 ```
 
-Limites :
+Durations can be changed by steps of:
 
 ```text
-Minimum : 1.0 seconde
-Maximum : 20.0 secondes
+0.5 second
 ```
 
-La méthode utilisée pour garder les durées dans les limites est :
+Limits:
+
+```text
+Minimum : 1.0 second
+Maximum : 20.0 seconds
+```
+
+The method used to keep durations within limits is:
 
 ```csharp
 ClampDuration(double value)
 ```
 
-### Thèmes de couleurs
+### Color themes
 
-Les thèmes disponibles sont :
+Available themes:
 
 ```text
 Océan nocturne
@@ -219,81 +219,81 @@ Crépuscule
 Clair minimal
 ```
 
-Chaque thème définit actuellement :
+Each theme currently defines:
 
-- couleur de fond ;
-- couleur du texte ;
-- couleur de la jauge ;
-- couleur de bord de jauge ;
-- couleur de la boule.
+- background color;
+- text color;
+- gauge color;
+- gauge border color;
+- ball color.
 
-Note : la couleur de bord de jauge existe encore dans la structure des thèmes, mais la jauge ne dessine plus de bordure visible pour le moment.
+Note: the gauge border color still exists in the theme structure, but the gauge currently does not draw a visible border.
 
-## Interface actuelle
+## Current interface
 
-### Écran principal
+### Main screen
 
-Éléments visibles :
-
-```text
-[jauge + boule]
-
-[▶ ou ⏸]                              [⚙]
-```
-
-L'écran principal est volontairement dépouillé pour être calme et utilisable sur téléphone.
-
-### Écran réglages
-
-Éléments visibles :
+Visible elements:
 
 ```text
-[←] Réglages
+[gauge + ball]
 
-Respiration
-Inspiration    [−]  4.0s  [+]
-Expiration     [−]  4.0s  [+]
-
-Couleurs
-[‹]  Nom du thème  [›]
-
-[Réinitialiser le cycle]
+[▶ or ⏸]                              [⚙]
 ```
 
-## État actuel validé
+The main screen is intentionally minimal, calm, and suitable for phone use.
 
-Fonctionnel :
+### Settings screen
 
-- projet Godot C# minimal ;
-- scène principale configurée ;
-- interface construite par code ;
-- écran principal séparé de l'écran des réglages ;
-- jauge verticale arrondie en forme de capsule ;
-- jauge sans bordure visible ;
-- jauge sans repères latéraux ;
-- boule plus grande dans la jauge ;
-- animation inspiration / expiration ;
-- bouton démarrer / pause ;
-- bouton réglages ;
-- écran de réglages séparé ;
-- réglage des durées ;
-- changement de thème ;
-- documentation de l'implémentation actuelle.
+Visible elements:
 
-## Points techniques à surveiller
+```text
+[←] Settings
 
-### Compilation C# dans Godot
+Breathing
+Inhalation    [−]  4.0s  [+]
+Exhalation    [−]  4.0s  [+]
 
-Il peut arriver que Godot ne recompilie pas correctement l'assembly C# après un remplacement de fichiers.
+Colors
+[‹]  Theme name  [›]
 
-En cas de doute, depuis la racine du projet :
+[Reset cycle]
+```
+
+## Current validated state
+
+Implemented and validated:
+
+- minimal Godot C# project;
+- configured main scene;
+- interface built in code;
+- main screen separated from the settings screen;
+- vertical rounded capsule-shaped gauge;
+- gauge without visible border;
+- gauge without side markers;
+- larger ball inside the gauge;
+- inhalation/exhalation animation;
+- start/pause button;
+- settings button;
+- separate settings screen;
+- duration controls;
+- theme switching;
+- current implementation documentation.
+
+## Technical points to watch
+
+### C# compilation in Godot
+
+Sometimes Godot may fail to recompile the C# assembly correctly after replacing files.
+
+When in doubt, run this from the project root:
 
 ```bash
 dotnet clean
 dotnet build
 ```
 
-Si le problème persiste, fermer Godot puis supprimer les dossiers générés :
+If the issue persists, close Godot and delete the generated folders:
 
 ```bat
 rmdir /s /q bin
@@ -301,15 +301,15 @@ rmdir /s /q obj
 rmdir /s /q .godot\mono
 ```
 
-Ensuite rouvrir le projet dans Godot, faire un build, puis relancer.
+Then reopen the project in Godot, build it, and run it again.
 
-## À faire plus tard
+## Later improvements
 
-Pistes possibles :
+Possible next steps:
 
-- améliorer encore l'esthétique générale ;
-- sauvegarder les réglages localement ;
-- ajouter éventuellement un court temps de pause entre inspiration et expiration ;
-- tester sur Android ;
-- préparer l'export Android ;
-- vérifier les tailles des boutons et icônes sur un vrai téléphone.
+- further improve the overall visual design;
+- save settings locally;
+- optionally add a short pause between inhalation and exhalation;
+- test on Android;
+- prepare Android export;
+- check button and icon sizes on a real phone.
