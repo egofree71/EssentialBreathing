@@ -39,11 +39,13 @@ public sealed class BreathingSettings
 
         new(
             "Jungle",
-            new Color(0.02f, 0.13f, 0.07f),
-            new Color(0.90f, 1.00f, 0.88f),
-            new Color(0.04f, 0.34f, 0.13f),
-            new Color(0.17f, 0.66f, 0.24f),
-            new Color(0.42f, 0.95f, 0.25f)),
+            // Inspired by the Color Hex palette 24608:
+            // #63FF00, #00DD3B, #06B400, #008D02, #066916.
+            new Color(0.02f, 0.41f, 0.09f),
+            new Color(0.95f, 1.00f, 0.92f),
+            new Color(0.00f, 0.55f, 0.01f),
+            new Color(0.00f, 0.87f, 0.23f),
+            new Color(0.39f, 1.00f, 0.00f)),
 
         new(
             "Volcanique",
