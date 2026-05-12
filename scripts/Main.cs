@@ -872,6 +872,56 @@ public partial class Main : Control
     }
 
     /// <summary>
+    /// Applies a soft theme-aware style to a main-screen icon button.
+    /// </summary>
+    /// <remarks>
+    /// Godot's default Button style uses a dark grey fill. That looks acceptable
+    /// on dark palettes, but becomes visually heavy on the light Sky theme. These
+    /// overrides keep the buttons subtle by tinting the background from the current
+    /// theme text color and using transparency instead of an opaque grey block.
+    /// </remarks>
+    private static void ApplyMainButtonStyle(Button button, Color iconColor)
+    {
+        button.AddThemeColorOverride("font_color", iconColor);
+        button.AddThemeColorOverride("font_hover_color", iconColor);
+        button.AddThemeColorOverride("font_pressed_color", iconColor);
+        button.AddThemeColorOverride("font_focus_color", iconColor);
+        button.AddThemeColorOverride("font_disabled_color", new Color(iconColor.R, iconColor.G, iconColor.B, 0.45f));
+
+        button.AddThemeStyleboxOverride("normal", CreateMainButtonStyleBox(iconColor, 0.10f, 0.16f));
+        button.AddThemeStyleboxOverride("hover", CreateMainButtonStyleBox(iconColor, 0.16f, 0.22f));
+        button.AddThemeStyleboxOverride("pressed", CreateMainButtonStyleBox(iconColor, 0.24f, 0.30f));
+        button.AddThemeStyleboxOverride("focus", CreateMainButtonStyleBox(iconColor, 0.10f, 0.32f));
+        button.AddThemeStyleboxOverride("disabled", CreateMainButtonStyleBox(iconColor, 0.06f, 0.10f));
+    }
+
+    /// <summary>
+    /// Creates one translucent StyleBoxFlat variant for main-screen buttons.
+    /// </summary>
+    private static StyleBoxFlat CreateMainButtonStyleBox(Color color, float backgroundAlpha, float borderAlpha)
+    {
+        var style = new StyleBoxFlat
+        {
+            BgColor = new Color(color.R, color.G, color.B, backgroundAlpha),
+            BorderColor = new Color(color.R, color.G, color.B, borderAlpha),
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            CornerRadiusTopLeft = 8,
+            CornerRadiusTopRight = 8,
+            CornerRadiusBottomRight = 8,
+            CornerRadiusBottomLeft = 8,
+            ContentMarginLeft = 8,
+            ContentMarginTop = 8,
+            ContentMarginRight = 8,
+            ContentMarginBottom = 8
+        };
+
+        return style;
+    }
+
+    /// <summary>
     /// Applies the neutral black-and-white button style used by the settings screen.
     /// </summary>
     private static void ApplySettingsButtonStyle(Button button)
@@ -1473,6 +1523,10 @@ public partial class Main : Control
         // a neutral black-and-white style for consistent readability.
         ApplyTextColorRecursive(_mainScreen, _settings.TextColor);
         ApplyTextColorRecursive(_settingsScreen, Colors.White);
+
+        ApplyMainButtonStyle(_settingsButton, _settings.TextColor);
+        ApplyMainButtonStyle(_startResumeButton, _settings.TextColor);
+        ApplyMainButtonStyle(_stopButton, _settings.TextColor);
     }
 
     /// <summary>

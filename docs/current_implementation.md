@@ -138,6 +138,7 @@ Responsibilities:
 - update the pause progress display;
 - show the completion fade overlay when a session ends naturally;
 - apply color themes to the main screen;
+- apply subtle theme-aware button backgrounds on the main screen so light themes do not use Godot's dark default button style;
 - keep the settings screen readable with a neutral black-and-white style;
 - keep interactive controls inside mobile safe areas when Android Edge to Edge is enabled;
 - use localized labels through `AppLocalization`.
@@ -197,6 +198,7 @@ Details:
 - the `Simple Breathing` title is no longer displayed;
 - the settings button is in the top-left corner;
 - the start button is centered near the bottom;
+- main-screen buttons use a translucent theme-aware style instead of Godot's default dark grey button background;
 - the gauge is vertically centered in the screen;
 - the top pause-progress area and bottom control area reserve matching heights, so the gauge remains centered and stable;
 - the bottom button area is kept stable so the gauge does not resize when buttons appear or disappear.
