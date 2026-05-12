@@ -137,7 +137,7 @@ public partial class Main : Control
             Name = "MainScreenMargin"
         };
         margin.AddThemeConstantOverride("margin_left", 24);
-        margin.AddThemeConstantOverride("margin_top", 24);
+        margin.AddThemeConstantOverride("margin_top", 16);
         margin.AddThemeConstantOverride("margin_right", 24);
         margin.AddThemeConstantOverride("margin_bottom", 24);
         root.AddChild(margin);
@@ -149,7 +149,7 @@ public partial class Main : Control
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             SizeFlagsVertical = SizeFlags.ExpandFill
         };
-        mainColumn.AddThemeConstantOverride("separation", 18);
+        mainColumn.AddThemeConstantOverride("separation", 8);
         margin.AddChild(mainColumn);
 
         _topActionRow = BuildTopActionRow();
@@ -185,12 +185,12 @@ public partial class Main : Control
         var row = new HBoxContainer
         {
             Name = "TopActionRow",
-            CustomMinimumSize = new Vector2(0, 56),
+            CustomMinimumSize = new Vector2(0, 52),
             SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
         row.AddThemeConstantOverride("separation", 12);
 
-        _settingsButton = CreateIconButton("⚙", ShowSettingsScreen, 28);
+        _settingsButton = CreateIconButton("⚙", ShowSettingsScreen, 34);
         row.AddChild(_settingsButton);
 
         row.AddChild(new Control
@@ -283,7 +283,7 @@ public partial class Main : Control
 
         column.AddChild(CreateVerticalSpacer(10));
 
-        var colorsTitle = CreateSectionTitle("Couleurs");
+        var colorsTitle = CreateSectionTitle("Thèmes");
         column.AddChild(colorsTitle);
         column.AddChild(CreateThemeRow());
 

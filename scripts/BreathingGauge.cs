@@ -53,10 +53,10 @@ public partial class BreathingGauge : Control
 
         DrawCapsuleGauge(gaugeRect);
 
-        // The ball almost fills the gauge width, leaving a small margin so the
-        // movement still feels contained rather than clipped.
-        float ballRadius = Mathf.Clamp(gaugeWidth * 0.42f, 22.0f, 40.0f);
-        float verticalPadding = 4.0f;
+        // The ball uses the full capsule width. There is intentionally no side
+        // padding: the circle touches the gauge edges, like a piston in its tube.
+        float ballRadius = gaugeWidth * 0.5f;
+        float verticalPadding = 0.0f;
 
         // Keep the ball fully inside the capsule at both ends of the movement.
         float usableTop = gaugeRect.Position.Y + ballRadius + verticalPadding;
