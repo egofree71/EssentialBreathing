@@ -29,8 +29,15 @@ public partial class Main : Control
     private Label _exhaleValueLabel = null!;
     private Label _themeLabel = null!;
 
-    // Main action button. Its text switches between play and pause icons.
-    private Button _startPauseButton = null!;
+    // Main-screen controls. The containers stay visible to keep the gauge size stable.
+    private Button _settingsButton = null!;
+    private Button _startResumeButton = null!;
+    private Button _stopButton = null!;
+    private Control _topActionRow = null!;
+    private Control _bottomControls = null!;
+
+    // Transparent full-screen touch area used only while the breathing session is running.
+    private Control _pauseTouchArea = null!;
 
     // Full-screen background color rectangle used instead of relying on theme defaults.
     private ColorRect _background = null!;
@@ -42,6 +49,9 @@ public partial class Main : Control
     // Current breathing phase and elapsed time inside that phase.
     private BreathingPhase _currentPhase = BreathingPhase.Inhale;
     private double _phaseElapsed;
+
+    // A session starts only after the user presses the start button.
+    private bool _hasSessionStarted;
 
     // False on startup: the ball is visible at the bottom, but the cycle is not moving yet.
     private bool _isRunning;
@@ -55,6 +65,7 @@ public partial class Main : Control
         ApplyColors();
         UpdateTexts();
         UpdateGauge();
+        UpdateMainScreenVisibility();
     }
 
     /// <summary>
@@ -106,18 +117,31 @@ public partial class Main : Control
     }
 
     /// <summary>
-    /// Builds the calm breathing screen: gauge only, with play/pause and settings buttons.
+    /// Builds the calm breathing screen.
     /// </summary>
+    /// <remarks>
+    /// The start screen shows a settings button at the top left and a start icon
+    /// at the bottom center. During an active session, all buttons are hidden so
+    /// the user only sees the gauge and moving ball. Tapping the screen pauses the
+    /// session and reveals the stop/resume icons.
+    /// </remarks>
     private Control BuildMainScreen()
     {
-        var margin = new MarginContainer
+        var root = new Control
         {
             Name = "MainScreen"
+        };
+
+        var margin = new MarginContainer
+        {
+            Name = "MainScreenMargin"
         };
         margin.AddThemeConstantOverride("margin_left", 24);
         margin.AddThemeConstantOverride("margin_top", 24);
         margin.AddThemeConstantOverride("margin_right", 24);
         margin.AddThemeConstantOverride("margin_bottom", 24);
+        root.AddChild(margin);
+        FillParent(margin);
 
         var mainColumn = new VBoxContainer
         {
@@ -128,6 +152,9 @@ public partial class Main : Control
         mainColumn.AddThemeConstantOverride("separation", 18);
         margin.AddChild(mainColumn);
 
+        _topActionRow = BuildTopActionRow();
+        mainColumn.AddChild(_topActionRow);
+
         _gauge = new BreathingGauge
         {
             Name = "BreathingGauge",
@@ -137,30 +164,62 @@ public partial class Main : Control
         };
         mainColumn.AddChild(_gauge);
 
-        var bottomRow = new HBoxContainer
+        _bottomControls = BuildBottomControls();
+        mainColumn.AddChild(_bottomControls);
+
+        _pauseTouchArea = new Control
         {
-            Name = "BottomActionRow",
-            SizeFlagsHorizontal = SizeFlags.ExpandFill,
-            Alignment = BoxContainer.AlignmentMode.Center
+            Name = "PauseTouchArea",
+            MouseFilter = MouseFilterEnum.Stop,
+            Visible = false
         };
-        bottomRow.AddThemeConstantOverride("separation", 12);
-        mainColumn.AddChild(bottomRow);
+        _pauseTouchArea.GuiInput += OnPauseTouchAreaGuiInput;
+        root.AddChild(_pauseTouchArea);
+        FillParent(_pauseTouchArea);
 
-        _startPauseButton = CreateIconButton("▶", ToggleBreathing, 34);
-        bottomRow.AddChild(_startPauseButton);
+        return root;
+    }
 
-        // Expands between the two buttons so they stay anchored to opposite sides
-        // on portrait phone screens.
-        var spacer = new Control
+    private Control BuildTopActionRow()
+    {
+        var row = new HBoxContainer
         {
-            Name = "BottomSpacer",
+            Name = "TopActionRow",
+            CustomMinimumSize = new Vector2(0, 56),
             SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
-        bottomRow.AddChild(spacer);
+        row.AddThemeConstantOverride("separation", 12);
 
-        bottomRow.AddChild(CreateIconButton("⚙", ShowSettingsScreen, 28));
+        _settingsButton = CreateIconButton("⚙", ShowSettingsScreen, 28);
+        row.AddChild(_settingsButton);
 
-        return margin;
+        row.AddChild(new Control
+        {
+            Name = "TopActionSpacer",
+            SizeFlagsHorizontal = SizeFlags.ExpandFill
+        });
+
+        return row;
+    }
+
+    private Control BuildBottomControls()
+    {
+        var row = new HBoxContainer
+        {
+            Name = "BottomControls",
+            Alignment = BoxContainer.AlignmentMode.Center,
+            CustomMinimumSize = new Vector2(0, 64),
+            SizeFlagsHorizontal = SizeFlags.ExpandFill
+        };
+        row.AddThemeConstantOverride("separation", 16);
+
+        _stopButton = CreateSessionIconButton("■", StopBreathingSession, 34);
+        row.AddChild(_stopButton);
+
+        _startResumeButton = CreateSessionIconButton("▶", StartOrResumeBreathingSession, 38);
+        row.AddChild(_startResumeButton);
+
+        return row;
     }
 
     /// <summary>
@@ -331,7 +390,7 @@ public partial class Main : Control
         var button = new Button
         {
             Text = text,
-            CustomMinimumSize = new Vector2(88, 44)
+            CustomMinimumSize = new Vector2(112, 48)
         };
         button.Pressed += onPressed;
         return button;
@@ -343,6 +402,18 @@ public partial class Main : Control
         {
             Text = text,
             CustomMinimumSize = new Vector2(64, 56)
+        };
+        button.AddThemeFontSizeOverride("font_size", fontSize);
+        button.Pressed += onPressed;
+        return button;
+    }
+
+    private Button CreateSessionIconButton(string text, Action onPressed, int fontSize)
+    {
+        var button = new Button
+        {
+            Text = text,
+            CustomMinimumSize = new Vector2(76, 60)
         };
         button.AddThemeFontSizeOverride("font_size", fontSize);
         button.Pressed += onPressed;
@@ -385,17 +456,42 @@ public partial class Main : Control
         UpdateTexts();
     }
 
-    private void ToggleBreathing()
+    private void StartOrResumeBreathingSession()
     {
-        _isRunning = !_isRunning;
+        _hasSessionStarted = true;
+        _isRunning = true;
+        UpdateMainScreenVisibility();
+        UpdateTexts();
+    }
+
+    private void PauseBreathingSession()
+    {
+        if (!_hasSessionStarted || !_isRunning)
+        {
+            return;
+        }
+
+        _isRunning = false;
+        UpdateMainScreenVisibility();
+        UpdateTexts();
+    }
+
+    private void StopBreathingSession()
+    {
+        _hasSessionStarted = false;
+        _isRunning = false;
+        ResetCycle();
+        UpdateMainScreenVisibility();
         UpdateTexts();
     }
 
     private void ShowSettingsScreen()
     {
-        // Opening settings pauses the breathing animation. This avoids a moving
-        // background state while the user is changing durations or colors.
+        // Settings are currently available only before a breathing session starts.
+        // If this is called from a future UI path, stop the session explicitly.
+        _hasSessionStarted = false;
         _isRunning = false;
+        UpdateMainScreenVisibility();
         UpdateTexts();
 
         _mainScreen.Visible = false;
@@ -406,6 +502,7 @@ public partial class Main : Control
     {
         _settingsScreen.Visible = false;
         _mainScreen.Visible = true;
+        UpdateMainScreenVisibility();
         UpdateTexts();
     }
 
@@ -417,6 +514,32 @@ public partial class Main : Control
         UpdateTexts();
     }
 
+    private void OnPauseTouchAreaGuiInput(InputEvent inputEvent)
+    {
+        if (!IsPrimaryPress(inputEvent))
+        {
+            return;
+        }
+
+        PauseBreathingSession();
+        GetViewport().SetInputAsHandled();
+    }
+
+    private static bool IsPrimaryPress(InputEvent inputEvent)
+    {
+        if (inputEvent is InputEventScreenTouch touch)
+        {
+            return touch.Pressed;
+        }
+
+        if (inputEvent is InputEventMouseButton mouse)
+        {
+            return mouse.Pressed && mouse.ButtonIndex == MouseButton.Left;
+        }
+
+        return false;
+    }
+
     private double GetCurrentPhaseDuration()
     {
         return _currentPhase == BreathingPhase.Inhale
@@ -426,11 +549,6 @@ public partial class Main : Control
 
     private void UpdateTexts()
     {
-        if (_startPauseButton != null)
-        {
-            _startPauseButton.Text = _isRunning ? "⏸" : "▶";
-        }
-
         if (_inhaleValueLabel != null)
         {
             _inhaleValueLabel.Text = $"{_settings.InhaleDuration:0.0}s";
@@ -445,6 +563,29 @@ public partial class Main : Control
         {
             _themeLabel.Text = _settings.CurrentThemeName;
         }
+    }
+
+    private void UpdateMainScreenVisibility()
+    {
+        bool isStartScreen = !_hasSessionStarted;
+        bool isPausedSession = _hasSessionStarted && !_isRunning;
+        bool isRunningSession = _hasSessionStarted && _isRunning;
+
+        // The top and bottom rows stay visible even when their buttons are hidden.
+        // This prevents the gauge from changing size when the session starts.
+        _topActionRow.Visible = true;
+        _bottomControls.Visible = true;
+
+        _settingsButton.Visible = isStartScreen;
+        _stopButton.Visible = isPausedSession;
+        _startResumeButton.Visible = isStartScreen || isPausedSession;
+
+        // While running, this invisible Control catches any screen tap so the
+        // user can pause without aiming for a tiny button.
+        _pauseTouchArea.Visible = isRunningSession;
+        _pauseTouchArea.MouseFilter = isRunningSession
+            ? MouseFilterEnum.Stop
+            : MouseFilterEnum.Ignore;
     }
 
     private void UpdateGauge()
