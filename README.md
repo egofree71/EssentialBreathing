@@ -1,27 +1,34 @@
 # SimpleBreathing
 
-A very simple Android breathing app built with Godot 4.6.2 and C#.
+A very simple Android breathing app built with **Godot 4.6.2** and **C#**.
 
 ## Goal
 
-The app displays a vertical gauge with a ball that moves upward during inhalation and downward during exhalation.
+SimpleBreathing displays a vertical breathing gauge with a ball that moves upward during inhalation and downward during exhalation.
 
-The goal is to keep the interface calm and minimal: when the app starts, the main screen only shows the gauge, the ball, a start/pause button, and a button to open the settings screen.
+The interface is intentionally minimal and calm:
+
+- the main screen focuses on the gauge and the breathing ball;
+- settings are kept on a separate screen;
+- during a breathing session, controls are hidden;
+- tapping the screen pauses the session.
 
 ## Current state
 
 Implemented:
 
 - minimal Godot C# project;
-- configured main scene;
-- clean main screen;
+- main scene configured for a mobile portrait layout;
+- main UI built in C#;
 - vertical rounded capsule-shaped gauge;
-- animated ball inside the gauge;
-- start/pause button on the main screen;
-- settings button on the main screen;
+- large breathing ball inside the gauge;
+- eased ball movement for a more natural breathing rhythm;
+- start, pause, resume, and stop session flow;
 - separate settings screen;
 - editable inhalation and exhalation durations;
-- selectable color themes.
+- selectable visual themes;
+- neutral black-and-white settings screen for readability;
+- SVG save icon in the settings screen.
 
 ## Technical documentation
 
@@ -31,4 +38,4 @@ See:
 docs/current_implementation.md
 ```
 
-This file describes the current architecture, scenes, scripts, and application behavior.
+This file describes the current architecture, scenes, scripts, UI behavior, and implementation details.
