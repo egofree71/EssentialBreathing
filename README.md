@@ -13,7 +13,8 @@ The interface is intentionally minimal and calm:
 - settings are kept on a separate screen;
 - during a breathing session, controls are hidden;
 - tapping the screen pauses the session;
-- while paused, the app shows elapsed session time and a progress bar.
+- while paused, the app shows elapsed session time and a progress bar;
+- when a session ends naturally, the app uses a soft fade transition and displays a completion message.
 
 ## Current state
 
@@ -27,13 +28,15 @@ Implemented:
 - eased ball movement for a more natural breathing rhythm;
 - configurable inhalation and exhalation durations;
 - configurable total session duration in whole minutes;
-- start, pause, resume, stop, and automatic session end flow;
+- start, pause, resume, stop, and soft automatic session completion flow;
 - pause progress display above the gauge;
 - separate settings screen;
 - deferred settings editing: changes are applied only when pressing the save icon;
+- settings persistence through Godot `user://settings.cfg`;
 - selectable visual themes;
 - neutral black-and-white settings screen for readability;
 - SVG save icon in the settings screen;
+- completion overlay with fade out / fade in and “Session terminée” message;
 - documented `Main.cs` controller methods.
 
 ## Technical documentation

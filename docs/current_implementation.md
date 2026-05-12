@@ -32,6 +32,7 @@ SimpleBreathing/
 │   ├── Main.cs
 │   ├── BreathingGauge.cs
 │   ├── BreathingSettings.cs
+│   ├── SettingsStorage.cs
 │   └── FloppyIcon.cs
 └── docs/
     └── current_implementation.md
@@ -105,10 +106,12 @@ Responsibilities:
 - manage screen switching;
 - manage settings draft values;
 - apply settings only when the user saves;
+- persist saved settings through `user://settings.cfg`;
 - manage the breathing session state;
 - manage the inhalation/exhalation cycle;
 - manage total session duration;
 - update the pause progress display;
+- show the completion fade overlay when a session ends naturally;
 - apply color themes to the main screen;
 - keep the settings screen readable with a neutral black-and-white style.
 
@@ -134,6 +137,12 @@ _draftThemeIndex
 Draft settings edited on the settings screen.
 
 The draft values are copied to `_settings` only when the user presses the save icon.
+
+When the save icon is pressed, the active settings are also written to:
+
+```text
+user://settings.cfg
+```
 
 This avoids a confusing behavior where pressing the back arrow after editing settings still changed the main screen.
 
@@ -247,8 +256,44 @@ When pressed:
 When the configured session duration is reached:
 
 - the session stops automatically;
-- the cycle resets;
+- a full-screen overlay fades the current view to black;
+- the app resets the session while the screen is black;
+- the text `Session terminée` fades in;
+- the message stays visible for about 2 seconds;
+- the overlay fades out;
 - the app returns to the initial main screen.
+
+The fade transition avoids a sudden visual jump from the final breathing frame back to the start state.
+
+### Completion overlay
+
+The completion message is handled by a full-screen overlay created in `Main.cs`.
+
+Overlay elements:
+
+```text
+CompletionOverlay
+CompletionFade
+CompletionLabel
+```
+
+The label text is:
+
+```text
+Session terminée
+```
+
+Animation sequence:
+
+```text
+fade to black       : about 0.45 s
+text fade in        : about 0.35 s
+message hold        : 2.0 s
+text + black fade out: about 0.45 s
+```
+
+The app resets the session while the screen is black, so the user does not see an abrupt jump.
+
 
 ## Settings screen
 
@@ -365,9 +410,15 @@ It is displayed through:
 scripts/FloppyIcon.cs
 ```
 
-Important: settings are currently applied in memory only. The save button applies the draft values to the active in-memory settings and returns to the main screen.
+Important: settings are applied and persisted only when the save button is pressed.
 
-Settings are **not persisted to disk yet**.
+The save button:
+
+- copies draft values to the active settings;
+- writes the active settings to `user://settings.cfg`;
+- returns to the main screen.
+
+If the user presses `←`, draft changes are discarded and no file is written.
 
 ## Breathing session and cycle
 
@@ -514,7 +565,7 @@ The progress value is clamped between `0.0` and `1.0`.
 
 ## `scripts/BreathingSettings.cs`
 
-Contains in-memory breathing parameters and color themes.
+Contains breathing parameters and color themes. Values are kept in memory during runtime and persisted by `SettingsStorage` when the user saves settings.
 
 ### Inhalation and exhalation durations
 
@@ -584,7 +635,7 @@ Current themes:
 ```text
 Océan
 Jungle
-Volcanique
+Volcan
 Ciel
 ```
 
@@ -602,8 +653,43 @@ Note: `GaugeBorderColor` still exists in the theme data, but the gauge no longer
 
 - `Océan` is a saturated blue theme.
 - `Jungle` is based on bright green jungle-like colors.
-- `Volcanique` is based on dark red, lava orange, and yellow colors.
+- `Volcan` is based on dark red, lava orange, and yellow colors.
 - `Ciel` uses light sky-like colors, including light blue and white.
+
+## `scripts/SettingsStorage.cs`
+
+Static helper responsible for loading and saving settings in Godot's user data folder.
+
+Storage path:
+
+```text
+user://settings.cfg
+```
+
+This is the portable Godot path for app-specific user data. On Android it resolves to the application's private writable storage, so no external storage permission is needed.
+
+The file is a Godot `ConfigFile` with a `breathing` section.
+
+Saved keys:
+
+```text
+inhale_duration
+exhale_duration
+session_duration_minutes
+theme_index
+```
+
+Loading behavior:
+
+- called during `Main._Ready()` before building the UI;
+- missing file means defaults are kept;
+- invalid or missing values fall back to the current default values;
+- loaded values are clamped through `BreathingSettings` before use.
+
+Saving behavior:
+
+- called only from `SaveSettings()` after the user presses the save icon;
+- canceled draft changes are not saved.
 
 ## `scripts/FloppyIcon.cs`
 
@@ -658,7 +744,7 @@ Implemented and validated:
 - tap/click anywhere to pause while running;
 - pause progress display above the gauge;
 - progress bar based on total session duration;
-- automatic stop when session duration is reached;
+- soft completion fade when session duration is reached;
 - vertical rounded capsule-shaped gauge;
 - gauge vertically centered on the main screen;
 - gauge without visible border;
@@ -670,6 +756,7 @@ Implemented and validated:
 - editable total session duration with a whole-minute slider;
 - theme switching;
 - settings draft/cancel/save behavior;
+- settings persistence in `user://settings.cfg`;
 - themes renamed and recolored;
 - neutral black-and-white settings screen;
 - larger settings text and button symbols;
@@ -706,17 +793,29 @@ If the save icon does not appear after copying the package, close and reopen the
 
 ### Settings persistence
 
-The save button currently applies settings only in memory.
+Settings are stored in:
 
-This means settings are not persisted after closing the app. A future step should store them locally, probably through Godot user settings or a small config file.
+```text
+user://settings.cfg
+```
+
+On Android, this is app-specific private storage. The app should keep the settings after closing and reopening it, as long as the app data is not cleared or the app is not uninstalled.
+
+For testing:
+
+1. change a setting;
+2. press the save icon;
+3. close the app completely;
+4. reopen it;
+5. verify that the saved values are restored.
 
 ## Later improvements
 
 Possible next steps:
 
-- persist settings locally;
+- test settings persistence on a real Android phone;
 - test button sizes on a real Android phone;
 - test the breathing rhythm on an actual phone screen;
 - prepare Android export;
-- add a calm completion state instead of immediately returning to the start screen;
+- optionally refine the completion fade timing after testing on a phone;
 - optionally add haptic feedback or sound, if it remains calm and unobtrusive.
