@@ -13,8 +13,16 @@ public sealed class BreathingSettings
     public const double DurationStep = 0.5;
     public const double MinimumDuration = 1.0;
     public const double MaximumDuration = 20.0;
+
+    public const int SessionDurationStepMinutes = 1;
+    public const int MinimumSessionDurationMinutes = 1;
+    public const int MaximumSessionDurationMinutes = 60;
+
     public double InhaleDuration { get; set; } = 4.0;
     public double ExhaleDuration { get; set; } = 4.0;
+    public int SessionDurationMinutes { get; set; } = 5;
+
+    public double SessionDurationSeconds => SessionDurationMinutes * 60.0;
 
     public int CurrentThemeIndex { get; private set; }
 
@@ -97,6 +105,11 @@ public sealed class BreathingSettings
     public static double ClampDuration(double value)
     {
         return Math.Clamp(value, MinimumDuration, MaximumDuration);
+    }
+
+    public static int ClampSessionDurationMinutes(int value)
+    {
+        return Math.Clamp(value, MinimumSessionDurationMinutes, MaximumSessionDurationMinutes);
     }
 
     private static int WrapIndex(int value, int length)

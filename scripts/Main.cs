@@ -24,9 +24,11 @@ public partial class Main : Control
     // Custom Control responsible for drawing the gauge and moving ball.
     private BreathingGauge _gauge = null!;
 
-    // Settings-screen labels refreshed whenever durations or theme change.
+    // Settings-screen labels refreshed whenever durations, session length, or theme change.
     private Label _inhaleValueLabel = null!;
     private Label _exhaleValueLabel = null!;
+    private Label _sessionDurationValueLabel = null!;
+    private HSlider _sessionDurationSlider = null!;
     private Label _themeLabel = null!;
 
     // Main-screen controls. The containers stay visible to keep the gauge size stable.
@@ -51,9 +53,10 @@ public partial class Main : Control
     private Control _mainScreen = null!;
     private Control _settingsScreen = null!;
 
-    // Current breathing phase and elapsed time inside that phase.
+    // Current breathing phase, elapsed time inside that phase, and total elapsed session time.
     private BreathingPhase _currentPhase = BreathingPhase.Inhale;
     private double _phaseElapsed;
+    private double _sessionElapsed;
 
     // A session starts only after the user presses the start button.
     private bool _hasSessionStarted;
@@ -81,6 +84,14 @@ public partial class Main : Control
     {
         if (!_isRunning)
         {
+            return;
+        }
+
+        _sessionElapsed += delta;
+
+        if (_sessionElapsed >= GetSessionDuration())
+        {
+            StopBreathingSession();
             return;
         }
 
@@ -401,6 +412,8 @@ public partial class Main : Control
             () => AdjustExhaleDuration(-BreathingSettings.DurationStep),
             () => AdjustExhaleDuration(BreathingSettings.DurationStep)));
 
+        column.AddChild(CreateSessionDurationSlider());
+
         column.AddChild(CreateVerticalSpacer(10));
 
         var colorsTitle = CreateSectionTitle("Thèmes");
@@ -475,6 +488,58 @@ public partial class Main : Control
         row.AddChild(CreateSettingsButton("+", increase));
 
         return row;
+    }
+
+    private VBoxContainer CreateSessionDurationSlider()
+    {
+        var container = new VBoxContainer
+        {
+            Name = "SessionDurationContainer",
+            SizeFlagsHorizontal = SizeFlags.ExpandFill
+        };
+        container.AddThemeConstantOverride("separation", 8);
+
+        var row = new HBoxContainer
+        {
+            Name = "SessionDurationRow",
+            SizeFlagsHorizontal = SizeFlags.ExpandFill
+        };
+        row.AddThemeConstantOverride("separation", 10);
+        container.AddChild(row);
+
+        var label = new Label
+        {
+            Text = "Durée de séance",
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            VerticalAlignment = Godot.VerticalAlignment.Center
+        };
+        label.AddThemeFontSizeOverride("font_size", 20);
+        row.AddChild(label);
+
+        _sessionDurationValueLabel = new Label
+        {
+            Name = "SessionDurationValueLabel",
+            CustomMinimumSize = new Vector2(90, 0),
+            HorizontalAlignment = Godot.HorizontalAlignment.Right,
+            VerticalAlignment = Godot.VerticalAlignment.Center
+        };
+        _sessionDurationValueLabel.AddThemeFontSizeOverride("font_size", 20);
+        row.AddChild(_sessionDurationValueLabel);
+
+        _sessionDurationSlider = new HSlider
+        {
+            Name = "SessionDurationSlider",
+            MinValue = BreathingSettings.MinimumSessionDurationMinutes,
+            MaxValue = BreathingSettings.MaximumSessionDurationMinutes,
+            Step = BreathingSettings.SessionDurationStepMinutes,
+            Value = _settings.SessionDurationMinutes,
+            CustomMinimumSize = new Vector2(0, 42),
+            SizeFlagsHorizontal = SizeFlags.ExpandFill
+        };
+        _sessionDurationSlider.ValueChanged += OnSessionDurationSliderValueChanged;
+        container.AddChild(_sessionDurationSlider);
+
+        return container;
     }
 
     private HBoxContainer CreateThemeRow()
@@ -661,14 +726,29 @@ public partial class Main : Control
     private void AdjustInhaleDuration(double delta)
     {
         _settings.InhaleDuration = BreathingSettings.ClampDuration(_settings.InhaleDuration + delta);
-        ResetCycle();
+        ResetSessionProgress();
         UpdateTexts();
     }
 
     private void AdjustExhaleDuration(double delta)
     {
         _settings.ExhaleDuration = BreathingSettings.ClampDuration(_settings.ExhaleDuration + delta);
-        ResetCycle();
+        ResetSessionProgress();
+        UpdateTexts();
+    }
+
+    private void OnSessionDurationSliderValueChanged(double value)
+    {
+        int minutes = BreathingSettings.ClampSessionDurationMinutes((int)Math.Round(value));
+
+        _settings.SessionDurationMinutes = minutes;
+
+        if (_sessionDurationSlider != null && Math.Abs(_sessionDurationSlider.Value - minutes) > 0.001)
+        {
+            _sessionDurationSlider.Value = minutes;
+        }
+
+        ResetSessionProgress();
         UpdateTexts();
     }
 
@@ -695,6 +775,11 @@ public partial class Main : Control
 
     private void StartOrResumeBreathingSession()
     {
+        if (!_hasSessionStarted)
+        {
+            ResetSessionProgress();
+        }
+
         _hasSessionStarted = true;
         _isRunning = true;
         UpdateMainScreenVisibility();
@@ -717,7 +802,7 @@ public partial class Main : Control
     {
         _hasSessionStarted = false;
         _isRunning = false;
-        ResetCycle();
+        ResetSessionProgress();
         UpdateMainScreenVisibility();
         UpdateTexts();
     }
@@ -728,6 +813,7 @@ public partial class Main : Control
         // If this is called from a future UI path, stop the session explicitly.
         _hasSessionStarted = false;
         _isRunning = false;
+        ResetSessionProgress();
         UpdateMainScreenVisibility();
         UpdateTexts();
 
@@ -741,6 +827,12 @@ public partial class Main : Control
         _mainScreen.Visible = true;
         UpdateMainScreenVisibility();
         UpdateTexts();
+    }
+
+    private void ResetSessionProgress()
+    {
+        _sessionElapsed = 0.0;
+        ResetCycle();
     }
 
     private void ResetCycle()
@@ -790,16 +882,23 @@ public partial class Main : Control
         return Math.Clamp(_phaseElapsed / GetCurrentPhaseDuration(), 0.0, 1.0);
     }
 
-    private double GetCycleDuration()
+    private double GetSessionDuration()
     {
-        return _settings.InhaleDuration + _settings.ExhaleDuration;
+        return _settings.SessionDurationSeconds;
     }
 
-    private double GetCycleElapsed()
+    private double GetSessionProgress()
     {
-        return _currentPhase == BreathingPhase.Inhale
-            ? _phaseElapsed
-            : _settings.InhaleDuration + _phaseElapsed;
+        double sessionDuration = GetSessionDuration();
+        return sessionDuration > 0.0
+            ? Math.Clamp(_sessionElapsed / sessionDuration, 0.0, 1.0)
+            : 0.0;
+    }
+
+    private static string FormatMinutesSeconds(double totalSeconds)
+    {
+        int seconds = Math.Max(0, (int)Math.Floor(totalSeconds));
+        return $"{seconds / 60}:{seconds % 60:00}";
     }
 
     private static double EaseInOut(double value)
@@ -821,6 +920,17 @@ public partial class Main : Control
         if (_exhaleValueLabel != null)
         {
             _exhaleValueLabel.Text = $"{_settings.ExhaleDuration:0.0}s";
+        }
+
+        if (_sessionDurationValueLabel != null)
+        {
+            _sessionDurationValueLabel.Text = $"{_settings.SessionDurationMinutes} min";
+        }
+
+        if (_sessionDurationSlider != null &&
+            Math.Abs(_sessionDurationSlider.Value - _settings.SessionDurationMinutes) > 0.001)
+        {
+            _sessionDurationSlider.Value = _settings.SessionDurationMinutes;
         }
 
         if (_themeLabel != null)
@@ -891,15 +1001,12 @@ public partial class Main : Control
             return;
         }
 
-        double cycleDuration = GetCycleDuration();
-        double cycleElapsed = GetCycleElapsed();
-        double progress = cycleDuration > 0.0
-            ? Math.Clamp(cycleElapsed / cycleDuration, 0.0, 1.0)
-            : 0.0;
+        double sessionDuration = GetSessionDuration();
+        double sessionProgress = GetSessionProgress();
 
-        _pauseElapsedLabel.Text = $"{cycleElapsed:0.0}s / {cycleDuration:0.0}s";
+        _pauseElapsedLabel.Text = $"{FormatMinutesSeconds(_sessionElapsed)} / {FormatMinutesSeconds(sessionDuration)}";
 
-        float fillWidth = _pauseProgressBar.Size.X * (float)progress;
+        float fillWidth = _pauseProgressBar.Size.X * (float)sessionProgress;
         _pauseProgressFill.OffsetRight = fillWidth;
     }
 
