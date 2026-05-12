@@ -5,6 +5,10 @@ const BreathingSettings := preload("res://scripts/breathing_settings.gd")
 const SettingsStorage := preload("res://scripts/settings_storage.gd")
 const BreathingGauge := preload("res://scripts/breathing_gauge.gd")
 
+const BACK_ICON := preload("res://assets/icons/back.svg")
+const STOP_ICON := preload("res://assets/icons/stop.svg")
+const PLAY_ICON := preload("res://assets/icons/play.svg")
+
 enum BreathingPhase { INHALE, EXHALE }
 
 # Fixed visual size used by the main start/resume/stop buttons. Keep this larger
@@ -402,10 +406,10 @@ func _build_bottom_controls() -> Control:
 	controls.custom_minimum_size = Vector2(0, 64)
 	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
-	_stop_button = _create_session_icon_button("■", Callable(self, "_stop_breathing_session"), 34)
+	_stop_button = _create_session_svg_icon_button(STOP_ICON, Callable(self, "_stop_breathing_session"))
 	controls.add_child(_stop_button)
 
-	_start_resume_button = _create_session_icon_button("▶", Callable(self, "_start_or_resume_breathing_session"), 38)
+	_start_resume_button = _create_session_svg_icon_button(PLAY_ICON, Callable(self, "_start_or_resume_breathing_session"))
 	controls.add_child(_start_resume_button)
 
 	# The resume button is anchored to the exact horizontal center. When the stop
@@ -447,7 +451,7 @@ func _build_settings_screen() -> Control:
 	header_row.add_theme_constant_override("separation", 12)
 	column.add_child(header_row)
 
-	header_row.add_child(_create_settings_icon_button("←", Callable(self, "_show_main_screen"), 32))
+	header_row.add_child(_create_settings_svg_icon_button(BACK_ICON, Callable(self, "_show_main_screen")))
 
 	var title := Label.new()
 	title.text = AppLocalization.translate(AppLocalization.SETTINGS_TITLE)
@@ -616,12 +620,14 @@ func _create_icon_button(text: String, on_pressed: Callable, font_size := 28) ->
 	return button
 
 
-func _create_session_icon_button(text: String, on_pressed: Callable, font_size: int) -> Button:
+func _create_session_svg_icon_button(icon_texture: Texture2D, on_pressed: Callable) -> Button:
 	var button := Button.new()
-	button.text = text
+	button.text = ""
+	button.icon = icon_texture
+	button.expand_icon = true
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.custom_minimum_size = SESSION_BUTTON_SIZE
 	button.size = SESSION_BUTTON_SIZE
-	button.add_theme_font_size_override("font_size", font_size)
 	button.pressed.connect(on_pressed)
 	return button
 
@@ -636,11 +642,13 @@ func _create_settings_button(text: String, on_pressed: Callable) -> Button:
 	return button
 
 
-func _create_settings_icon_button(text: String, on_pressed: Callable, font_size := 28) -> Button:
+func _create_settings_svg_icon_button(icon_texture: Texture2D, on_pressed: Callable) -> Button:
 	var button := Button.new()
-	button.text = text
+	button.text = ""
+	button.icon = icon_texture
+	button.expand_icon = true
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.custom_minimum_size = Vector2(64, 56)
-	button.add_theme_font_size_override("font_size", font_size)
 	_apply_settings_button_style(button)
 	button.pressed.connect(on_pressed)
 	return button
