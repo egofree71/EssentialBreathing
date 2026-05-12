@@ -1,208 +1,152 @@
-# SimpleBreathing — Current Implementation
+# SimpleBreathing — implémentation actuelle
 
-This document describes the current implementation of the SimpleBreathing app.
+## Version
 
-The goal is to make it easy to resume work in a new discussion by explaining:
-- the general architecture,
-- the folder structure,
-- the scenes,
-- the scripts,
-- the current behavior,
-- the planned features,
-- and the known limitations.
+Package 01 — Architecture de base.
 
-## 1. Project Goal
+Objectif : avoir un projet Godot 4.6.2 C# ouvrable, compilable et lançable, avec une première scène principale fonctionnelle.
 
-SimpleBreathing is a very simple Android breathing app made with Godot.
-
-The main screen displays a vertical breathing gauge with a moving ball.
-
-The ball moves:
-- upward during inhalation,
-- downward during exhalation.
-
-The user should eventually be able to:
-- change the inhalation duration,
-- change the exhalation duration,
-- customize the colors,
-- pause/resume the breathing cycle,
-- save preferences locally.
-
-## 2. Technology
-
-- Engine: Godot 4.x .NET
-- Language: C#
-- Target platform: Android
-- Secondary target: Windows desktop for testing
-
-## 3. Folder Structure
+## Structure actuelle
 
 ```text
 SimpleBreathing/
-├── assets/      # Images, icons, fonts, sounds, visual resources
-├── docs/        # Project documentation
-├── scenes/      # Godot scenes
-├── scripts/     # C# scripts
-├── README.md    # Short public project description
-├── .gitignore   # Files ignored by Git
-└── project.godot
+├── project.godot
+├── SimpleBreathing.csproj
+├── SimpleBreathing.sln
+├── README.md
+├── scenes/
+│   └── Main.tscn
+├── scripts/
+│   ├── Main.cs
+│   ├── BreathingGauge.cs
+│   └── BreathingSettings.cs
+└── docs/
+    └── current_implementation.md
 ```
 
-## 4. Scenes
+## Scènes
 
-### Main.tscn
+### `scenes/Main.tscn`
 
-Main application scene.
+Scène principale du projet.
 
-Planned responsibilities:
-- display the background,
-- display the vertical breathing gauge,
-- display the breathing ball,
-- display the current breathing phase: `Inhale` / `Exhale`,
-- handle the breathing animation,
-- later provide access to settings.
+- Noeud racine : `Control`.
+- Script attaché : `scripts/Main.cs`.
+- La scène ne contient presque rien directement : l'interface est créée par le script pour ce premier prototype.
 
-Possible node structure:
+## Scripts
 
-```text
-Main
-├── Background
-├── Gauge
-├── BreathingBall
-├── PhaseLabel
-└── SettingsButton
-```
+### `scripts/Main.cs`
 
-This structure may change as the project evolves.
+Script principal de l'application.
 
-## 5. Scripts
+Responsabilités actuelles :
 
-### BreathingController.cs
+- crée l'interface utilisateur au lancement ;
+- gère le cycle inspiration / expiration ;
+- met à jour le texte affiché ;
+- met à jour la position visuelle de la boule dans la jauge ;
+- permet de modifier temporairement les durées avec des boutons ;
+- permet de mettre en pause et de réinitialiser le cycle.
 
-Main script controlling the breathing cycle.
+Le cycle actuel est volontairement simple :
 
-Responsibilities:
-- keep track of elapsed time,
-- calculate the current breathing phase,
-- move the ball up and down,
-- apply smooth easing to the movement,
-- expose inhale/exhale durations,
-- later handle pause/resume.
+1. inspiration : la boule monte progressivement de bas en haut ;
+2. expiration : la boule descend progressivement de haut en bas ;
+3. le cycle recommence.
 
-Basic algorithm:
+Les durées par défaut sont :
 
-```text
-cycleDuration = inhaleDuration + exhaleDuration
-phaseTime = elapsedTime % cycleDuration
+- inspiration : 4 secondes ;
+- expiration : 6 secondes.
 
-if phaseTime < inhaleDuration:
-    phase = Inhale
-    t = phaseTime / inhaleDuration
-    ball moves from bottom to top
-else:
-    phase = Exhale
-    t = (phaseTime - inhaleDuration) / exhaleDuration
-    ball moves from top to bottom
-```
+### `scripts/BreathingGauge.cs`
 
-The movement should use easing so that the ball moves gently instead of mechanically.
+Contrôle visuel personnalisé qui dessine :
 
-Example easing idea:
+- une jauge verticale ;
+- une boule ;
+- deux petits repères haut/bas.
+
+La méthode principale est :
 
 ```csharp
-private float Smooth(float t)
-{
-    return 0.5f - 0.5f * Mathf.Cos(t * Mathf.Pi);
-}
+SetProgress(float progress)
 ```
 
-## 6. Breathing Behavior
+Avec :
 
-Initial default values:
+- `0` = boule en bas ;
+- `1` = boule en haut.
 
-```text
-Inhale duration: 5 seconds
-Exhale duration: 5 seconds
-```
+### `scripts/BreathingSettings.cs`
 
-The ball starts at the bottom of the gauge.
+Contient les réglages de base de l'application :
 
-During inhalation:
-- the ball moves upward.
+- durée d'inspiration ;
+- durée d'expiration ;
+- couleurs principales ;
+- limites minimales et maximales des durées.
 
-During exhalation:
-- the ball moves downward.
+Pour l'instant, ces réglages ne sont pas encore sauvegardés. Ils existent seulement en mémoire pendant l'exécution.
 
-The cycle repeats indefinitely.
+## Tests à faire pour ce package
 
-## 7. Visual Style
+### Test 1 — ouverture du projet
 
-Initial visual idea:
-- dark blue background,
-- vertical rounded gauge,
-- glowing breathing ball,
-- minimal interface,
-- calm and non-distracting look.
+1. Copier les fichiers du package à la racine du dépôt.
+2. Ouvrir le projet avec Godot Engine .NET 4.6.2.
+3. Vérifier que la scène principale est bien `res://scenes/Main.tscn`.
 
-Reference image:
+Résultat attendu : le projet s'ouvre sans erreur majeure.
 
-```text
-assets/respiration_reference.png
-```
+### Test 2 — compilation C#
 
-## 8. Settings — Planned
+1. Cliquer sur **Build** dans Godot.
 
-Planned settings:
+Résultat attendu : le projet compile sans erreur.
 
-```text
-Inhale duration
-Exhale duration
-Background color
-Gauge color
-Ball color
-```
+Si Godot indique une erreur liée à `Godot.NET.Sdk`, vérifier que la version .NET de Godot est utilisée et que le SDK .NET est installé.
 
-These settings should eventually be saved locally.
+### Test 3 — lancement
 
-Possible Godot storage method:
-- `ConfigFile`,
-- or a custom `Resource` file,
-- or a simple JSON file.
+1. Lancer le projet avec **F5**.
 
-## 9. Android Export
+Résultat attendu :
 
-The app is intended for personal Android use.
+- fond sombre ;
+- titre `Simple Breathing` ;
+- texte `Inspiration` puis `Expiration` ;
+- jauge verticale ;
+- boule qui monte puis descend.
 
-First goal:
-- export an APK,
-- install it manually on the phone,
-- test the animation and screen scaling.
+### Test 4 — boutons de durée
 
-Publishing on the Play Store is not required for the initial version.
+1. Cliquer sur `+` ou `−` pour l'inspiration.
+2. Cliquer sur `+` ou `−` pour l'expiration.
 
-## 10. Current Status
+Résultat attendu :
 
-Initial repository created on GitHub.
+- les durées affichées changent par pas de 0.5 seconde ;
+- le cycle repart au début de l'inspiration.
 
-The project has been cloned locally.
+### Test 5 — pause et reset
 
-Next steps:
-1. create the Godot .NET project inside the cloned folder,
-2. add the initial folder structure,
-3. add this documentation file,
-4. create the first `Main` scene,
-5. implement the basic breathing ball animation.
+1. Cliquer sur `Pause`.
+2. Vérifier que la boule s'arrête.
+3. Cliquer sur `Reprendre`.
+4. Cliquer sur `Reset`.
 
-## 11. Known Questions / Decisions
+Résultat attendu :
 
-Open questions:
-- Should the UI be made with `Control` nodes or `Node2D`?
-- Should the gauge and ball be drawn with Godot shapes or with custom textures?
-- Should the first version support only portrait orientation?
-- Should settings be on the same screen or in a separate scene?
+- pause : l'animation s'arrête ;
+- reprendre : l'animation repart ;
+- reset : le cycle repart au début de l'inspiration.
 
-Initial decisions:
-- Keep the first version extremely simple.
-- Prioritize a working breathing animation before adding settings.
-- Use Git commits after each stable milestone.
-- Update this document whenever the architecture or behavior changes.
+## Prochaines étapes prévues
+
+1. Séparer un peu mieux l'interface en composants si nécessaire.
+2. Ajouter un vrai écran de réglages.
+3. Ajouter la sauvegarde locale des durées et des couleurs.
+4. Préparer l'export Android.
+5. Tester sur téléphone.

@@ -1,20 +1,17 @@
-# Godot
+# Godot generated/cache folders
 .godot/
 .import/
 export.cfg
 export_presets.cfg
 
-# Godot mono / C#
-.mono/
+# C# build outputs
 bin/
 obj/
 
-# Rider / JetBrains
-.idea/
-
-# VS Code
-.vscode/
-
-# OS
+# OS / IDE noise
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
+*.user
+*.DotSettings.user
