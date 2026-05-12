@@ -14,6 +14,7 @@ public partial class Main : Control
     private BreathingGauge _gauge = null!;
     private Label _phaseLabel = null!;
     private Label _durationLabel = null!;
+    private Label _themeLabel = null!;
     private Button _pauseButton = null!;
     private ColorRect _background = null!;
 
@@ -135,6 +136,9 @@ public partial class Main : Control
             () => AdjustExhaleDuration(BreathingSettings.DurationStep));
         controls.AddChild(exhaleRow);
 
+        var themeRow = CreateThemeRow();
+        controls.AddChild(themeRow);
+
         var actionRow = new HBoxContainer
         {
             Name = "ActionRow",
@@ -172,6 +176,41 @@ public partial class Main : Control
         return row;
     }
 
+    private HBoxContainer CreateThemeRow()
+    {
+        var row = new HBoxContainer
+        {
+            Name = "ThemeRow",
+            Alignment = BoxContainer.AlignmentMode.Center
+        };
+        row.AddThemeConstantOverride("separation", 10);
+
+        var label = new Label
+        {
+            Text = "Couleurs",
+            CustomMinimumSize = new Vector2(110, 0),
+            VerticalAlignment = Godot.VerticalAlignment.Center
+        };
+        label.AddThemeFontSizeOverride("font_size", 16);
+        row.AddChild(label);
+
+        row.AddChild(CreateButton("‹", SelectPreviousTheme));
+
+        _themeLabel = new Label
+        {
+            Name = "ThemeLabel",
+            CustomMinimumSize = new Vector2(128, 0),
+            HorizontalAlignment = Godot.HorizontalAlignment.Center,
+            VerticalAlignment = Godot.VerticalAlignment.Center
+        };
+        _themeLabel.AddThemeFontSizeOverride("font_size", 15);
+        row.AddChild(_themeLabel);
+
+        row.AddChild(CreateButton("›", SelectNextTheme));
+
+        return row;
+    }
+
     private Button CreateButton(string text, Action onPressed)
     {
         var button = new Button
@@ -193,6 +232,20 @@ public partial class Main : Control
     {
         _settings.ExhaleDuration = BreathingSettings.ClampDuration(_settings.ExhaleDuration + delta);
         ResetCycle();
+    }
+
+    private void SelectPreviousTheme()
+    {
+        _settings.MoveToPreviousTheme();
+        ApplyColors();
+        UpdateTexts();
+    }
+
+    private void SelectNextTheme()
+    {
+        _settings.MoveToNextTheme();
+        ApplyColors();
+        UpdateTexts();
     }
 
     private void TogglePause()
@@ -225,6 +278,7 @@ public partial class Main : Control
 
         _phaseLabel.Text = $"{phaseName}{pauseSuffix} · {remaining:0.0}s";
         _durationLabel.Text = $"Inspiration : {_settings.InhaleDuration:0.0}s   |   Expiration : {_settings.ExhaleDuration:0.0}s";
+        _themeLabel.Text = _settings.CurrentThemeName;
     }
 
     private void UpdateGauge()
@@ -245,6 +299,7 @@ public partial class Main : Control
         _gauge.GaugeColor = _settings.GaugeColor;
         _gauge.GaugeBorderColor = _settings.GaugeBorderColor;
         _gauge.BallColor = _settings.BallColor;
+        _gauge.QueueRedraw();
 
         ApplyTextColorRecursive(this, _settings.TextColor);
     }
@@ -254,6 +309,12 @@ public partial class Main : Control
         if (node is Label label)
         {
             label.AddThemeColorOverride("font_color", color);
+        }
+        else if (node is Button button)
+        {
+            button.AddThemeColorOverride("font_color", color);
+            button.AddThemeColorOverride("font_hover_color", color);
+            button.AddThemeColorOverride("font_pressed_color", color);
         }
 
         foreach (Node child in node.GetChildren())

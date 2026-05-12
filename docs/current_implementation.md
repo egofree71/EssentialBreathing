@@ -2,9 +2,9 @@
 
 ## Version
 
-Package 01 — Architecture de base.
+Package 02 — Thèmes de couleurs.
 
-Objectif : avoir un projet Godot 4.6.2 C# ouvrable, compilable et lançable, avec une première scène principale fonctionnelle.
+Objectif : garder la base fonctionnelle du Package 01, puis ajouter un premier réglage visuel simple permettant de changer rapidement l'ambiance de l'application.
 
 ## Structure actuelle
 
@@ -32,7 +32,7 @@ Scène principale du projet.
 
 - Noeud racine : `Control`.
 - Script attaché : `scripts/Main.cs`.
-- La scène ne contient presque rien directement : l'interface est créée par le script pour ce premier prototype.
+- L'interface est encore créée en code pour garder le prototype très facile à modifier.
 
 ## Scripts
 
@@ -47,7 +47,8 @@ Responsabilités actuelles :
 - met à jour le texte affiché ;
 - met à jour la position visuelle de la boule dans la jauge ;
 - permet de modifier temporairement les durées avec des boutons ;
-- permet de mettre en pause et de réinitialiser le cycle.
+- permet de mettre en pause et de réinitialiser le cycle ;
+- permet de changer de thème de couleurs avec les boutons `‹` et `›`.
 
 Le cycle actuel est volontairement simple :
 
@@ -58,7 +59,7 @@ Le cycle actuel est volontairement simple :
 Les durées par défaut sont :
 
 - inspiration : 4 secondes ;
-- expiration : 6 secondes.
+- expiration : 4 secondes.
 
 ### `scripts/BreathingGauge.cs`
 
@@ -79,24 +80,34 @@ Avec :
 - `0` = boule en bas ;
 - `1` = boule en haut.
 
+La jauge reçoit ses couleurs depuis `Main.cs`, qui les lit dans `BreathingSettings`.
+
 ### `scripts/BreathingSettings.cs`
 
 Contient les réglages de base de l'application :
 
 - durée d'inspiration ;
 - durée d'expiration ;
-- couleurs principales ;
-- limites minimales et maximales des durées.
+- limites minimales et maximales des durées ;
+- liste de thèmes de couleurs ;
+- thème courant.
+
+Les thèmes actuellement disponibles sont :
+
+- `Océan nocturne` ;
+- `Forêt douce` ;
+- `Crépuscule` ;
+- `Clair minimal`.
 
 Pour l'instant, ces réglages ne sont pas encore sauvegardés. Ils existent seulement en mémoire pendant l'exécution.
 
 ## Tests à faire pour ce package
 
-### Test 1 — ouverture du projet
+### Test 1 — remplacement des fichiers
 
 1. Copier les fichiers du package à la racine du dépôt.
-2. Ouvrir le projet avec Godot Engine .NET 4.6.2.
-3. Vérifier que la scène principale est bien `res://scenes/Main.tscn`.
+2. Accepter le remplacement des fichiers existants.
+3. Ouvrir le projet avec Godot Engine .NET 4.6.2.
 
 Résultat attendu : le projet s'ouvre sans erreur majeure.
 
@@ -106,47 +117,42 @@ Résultat attendu : le projet s'ouvre sans erreur majeure.
 
 Résultat attendu : le projet compile sans erreur.
 
-Si Godot indique une erreur liée à `Godot.NET.Sdk`, vérifier que la version .NET de Godot est utilisée et que le SDK .NET est installé.
-
 ### Test 3 — lancement
 
 1. Lancer le projet avec **F5**.
 
 Résultat attendu :
 
-- fond sombre ;
-- titre `Simple Breathing` ;
-- texte `Inspiration` puis `Expiration` ;
-- jauge verticale ;
-- boule qui monte puis descend.
+- l'application démarre comme avant ;
+- la boule monte et descend ;
+- les boutons de durée fonctionnent ;
+- les boutons `Pause` et `Reset` fonctionnent.
 
-### Test 4 — boutons de durée
+### Test 4 — changement de couleurs
 
-1. Cliquer sur `+` ou `−` pour l'inspiration.
-2. Cliquer sur `+` ou `−` pour l'expiration.
-
-Résultat attendu :
-
-- les durées affichées changent par pas de 0.5 seconde ;
-- le cycle repart au début de l'inspiration.
-
-### Test 5 — pause et reset
-
-1. Cliquer sur `Pause`.
-2. Vérifier que la boule s'arrête.
-3. Cliquer sur `Reprendre`.
-4. Cliquer sur `Reset`.
+1. Cliquer sur `›` dans la ligne `Couleurs`.
+2. Cliquer plusieurs fois pour parcourir les thèmes.
+3. Cliquer sur `‹` pour revenir en arrière.
 
 Résultat attendu :
 
-- pause : l'animation s'arrête ;
-- reprendre : l'animation repart ;
-- reset : le cycle repart au début de l'inspiration.
+- le nom du thème change ;
+- le fond change ;
+- les couleurs de la jauge et de la boule changent ;
+- l'animation continue normalement.
+
+### Test 5 — thème clair
+
+1. Aller jusqu'au thème `Clair minimal`.
+2. Vérifier que les textes restent lisibles.
+3. Revenir à un thème sombre.
+
+Résultat attendu : l'interface reste utilisable aussi bien en thème sombre qu'en thème clair.
 
 ## Prochaines étapes prévues
 
-1. Séparer un peu mieux l'interface en composants si nécessaire.
-2. Ajouter un vrai écran de réglages.
-3. Ajouter la sauvegarde locale des durées et des couleurs.
+1. Sauvegarder localement les durées et le thème choisi.
+2. Ajouter un vrai écran de réglages si l'écran principal devient trop chargé.
+3. Ajouter éventuellement une petite pause entre inspiration et expiration.
 4. Préparer l'export Android.
 5. Tester sur téléphone.

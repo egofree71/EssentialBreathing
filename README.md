@@ -1,14 +1,26 @@
 # SimpleBreathing
 
-Application Android très simple de respiration, réalisée avec Godot 4.6.2 en C#.
+Application Android très simple de respiration, développée avec Godot 4.6.2 .NET / C#.
 
-Objectif actuel : afficher une jauge verticale et une boule qui monte pendant l'inspiration puis descend pendant l'expiration.
+## État actuel
 
-## Premier test
+Package 02 — Thèmes de couleurs.
 
-1. Copier le contenu de ce package à la racine du dépôt `SimpleBreathing`.
-2. Ouvrir le projet avec Godot Engine .NET 4.6.2.
-3. Cliquer sur **Build** pour compiler le C#.
-4. Lancer le projet avec **F5**.
+Fonctionnalités disponibles :
 
-Résultat attendu : une fenêtre avec une jauge, une boule animée, un texte indiquant inspiration/expiration, et quelques boutons pour modifier les durées.
+- jauge verticale ;
+- boule qui monte pendant l'inspiration ;
+- boule qui descend pendant l'expiration ;
+- réglage temporaire de la durée d'inspiration ;
+- réglage temporaire de la durée d'expiration ;
+- pause ;
+- reset ;
+- choix rapide d'un thème de couleurs.
+
+## Documentation
+
+Voir :
+
+```text
+docs/current_implementation.md
+```
