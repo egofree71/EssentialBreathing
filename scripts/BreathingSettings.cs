@@ -5,8 +5,9 @@ using System;
 /// In-memory settings for one breathing session.
 /// </summary>
 /// <remarks>
-/// Settings are not persisted yet. They are centralized here so saving/loading can
-/// later be added without spreading duration and theme state through the UI code.
+/// Settings are centralized here and persisted by <see cref="SettingsStorage"/>.
+/// Keeping the values in one model avoids spreading duration and theme state
+/// through the UI code.
 /// </remarks>
 public sealed class BreathingSettings
 {

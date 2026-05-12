@@ -79,6 +79,10 @@ public partial class Main : Control
     /// </summary>
     public override void _Ready()
     {
+        // Load persisted values before building the UI so labels, sliders, and
+        // colors start with the previously saved settings on every platform.
+        SettingsStorage.Load(_settings);
+
         BuildInterface();
         ResetDraftSettingsFromCurrent();
         ApplyColors();
@@ -878,6 +882,11 @@ public partial class Main : Control
         {
             ResetSessionProgress();
         }
+
+        // Persist only after the user explicitly validates the draft values.
+        // The file is written under user://, which maps to an app-specific
+        // writable location on Android.
+        SettingsStorage.Save(_settings);
 
         ApplyColors();
         ShowMainScreen();
