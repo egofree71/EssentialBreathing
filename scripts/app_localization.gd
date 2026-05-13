@@ -42,7 +42,7 @@ const TRANSLATIONS := {
 		BREATHING_SECTION: "Respiration",
 		INHALE: "Inspiration",
 		EXHALE: "Expiration",
-		SESSION_DURATION: "Durée de séance",
+		SESSION_DURATION: "Durée de la session",
 		THEMES_SECTION: "Thèmes",
 		SESSION_COMPLETED: "Session terminée",
 		SESSION_DURATION_MINUTES_FORMAT: "{0} min",

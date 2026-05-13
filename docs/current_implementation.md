@@ -380,7 +380,7 @@ Respiration
 
 Inspiration        [−]  4.0s  [+]
 Expiration         [−]  4.0s  [+]
-Durée de séance     5 min
+Durée de la session     5 min
 [slider]
 
 Thèmes
