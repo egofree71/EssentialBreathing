@@ -172,6 +172,35 @@ func _process(delta: float) -> void:
 	_update_pause_progress_display()
 
 
+## Handles the mobile app lifecycle.
+##
+## When the user presses Home or Android/iOS sends the app to the background, the
+## breathing cycle is paused instead of silently continuing while the user cannot
+## see it. The keep-screen-on flag is also restored so the phone can sleep normally
+## outside the app.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_PAUSED:
+		_on_application_paused()
+	elif what == NOTIFICATION_APPLICATION_RESUMED:
+		_on_application_resumed()
+
+
+func _on_application_paused() -> void:
+	if _has_session_started and _is_running:
+		_pause_breathing_session(true)
+	else:
+		# If the user had manually paused before leaving the app, keep-screen-on may
+		# still be active. Restore it when the app is no longer in the foreground.
+		_restore_screen_keep_on_state()
+
+
+func _on_application_resumed() -> void:
+	# The session stays paused after returning to the app. The user explicitly
+	# resumes it with the play button, which also re-enables keep-screen-on.
+	_update_main_screen_visibility()
+	_update_texts()
+
+
 ## Safety hook: if the app exits during a session, restore the previous
 ## keep-screen-on setting.
 func _exit_tree() -> void:
@@ -918,6 +947,8 @@ func _start_or_resume_breathing_session() -> void:
 	if not _has_session_started:
 		_reset_session_progress()
 
+	# Enable keep-screen-on both for a brand-new session and when resuming a
+	# session that was paused automatically after the app went to the background.
 	_enable_screen_keep_on_for_session()
 
 	_has_session_started = true
@@ -927,11 +958,19 @@ func _start_or_resume_breathing_session() -> void:
 
 
 ## Pauses the current session without resetting elapsed time.
-func _pause_breathing_session() -> void:
+##
+## restore_screen_keep_on is used when the pause comes from the mobile lifecycle:
+## the session progress is kept, but the phone should be allowed to sleep while
+## the app is in the background.
+func _pause_breathing_session(restore_screen_keep_on := false) -> void:
 	if not _has_session_started or not _is_running:
 		return
 
 	_is_running = false
+
+	if restore_screen_keep_on:
+		_restore_screen_keep_on_state()
+
 	_update_main_screen_visibility()
 	_update_texts()
 
