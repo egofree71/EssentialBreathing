@@ -258,12 +258,20 @@ The progress bar:
 - is about three quarters of the base viewport width;
 - has a semi-transparent white background;
 - fills with white according to the elapsed session duration;
-- represents progress through the whole breathing session, not only the current inhale/exhale cycle.
+- represents progress through the whole breathing session, not only the current inhale/exhale cycle;
+- is capped visually at 100%, even if the internal session timer runs a little longer to finish the current exhalation.
 
 Example:
 
 ```text
 0:42 / 5:00
+```
+
+During the final end-of-exhale extension, the pause display stays capped at the configured duration:
+
+```text
+5:00 / 5:00
+[full progress bar]
 ```
 
 ### Stop
@@ -279,9 +287,15 @@ When the stop button is pressed:
 
 ### Automatic end
 
+The configured session duration is treated as a minimum duration rather than a hard cut.
+
 When the configured session duration is reached:
 
-- the session stops automatically;
+- the app enters a finishing state;
+- it does not start the completion overlay immediately unless the current exhalation has already reached the bottom;
+- the breathing cycle continues until the current or next exhalation finishes;
+- the ball returns naturally to the bottom of the gauge;
+- then the session stops automatically;
 - the previous screen sleep behavior is restored;
 - a full-screen overlay fades the current view to black;
 - the app resets the session while the screen is black;
@@ -290,7 +304,7 @@ When the configured session duration is reached:
 - the overlay fades out;
 - the app returns to the initial main screen.
 
-The fade transition avoids a sudden visual jump from the final breathing frame back to the start state.
+This avoids stopping the session in the middle of an inhalation or exhalation. The fade transition still avoids a sudden visual jump from the final breathing frame back to the start state.
 
 ### Completion overlay
 
@@ -486,7 +500,15 @@ When:
 _session_elapsed >= session duration seconds
 ```
 
-The app calls the completion flow, which fades to black, shows the completion message, resets the session, and returns to the start screen.
+The app sets:
+
+```text
+_is_finishing_session = true
+```
+
+The breathing cycle then continues until an exhalation finishes and the ball is back at the bottom of the gauge. At that point the app calls the completion flow, which fades to black, shows the completion message, resets the session, and returns to the start screen.
+
+During this final extension, `_session_elapsed` may internally exceed the configured duration. Pause-screen UI uses a display elapsed time capped to the configured duration, so the label and progress bar never go above 100%.
 
 ### Breathing cycle
 
@@ -819,7 +841,9 @@ Implemented and validated:
 - tap/click anywhere to pause while running;
 - pause progress display above the gauge;
 - progress bar based on total session duration;
-- soft completion fade when session duration is reached;
+- pause elapsed-time and progress bar capped at the configured duration;
+- natural session ending at the bottom of the gauge after the final exhalation;
+- soft completion fade after the final exhalation has finished;
 - vertical rounded capsule-shaped gauge;
 - gauge vertically centered on the main screen;
 - gauge without visible border;

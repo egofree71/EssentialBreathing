@@ -95,6 +95,11 @@ var _completion_label: Label
 # Prevents multiple completion animations from being started by the same session.
 var _is_showing_completion := false
 
+# Becomes true once the configured session duration has been reached.
+# From that point, the app keeps the breathing cycle running only until the
+# current or next exhalation finishes, so the ball ends naturally at the bottom.
+var _is_finishing_session := false
+
 # Current breathing phase, elapsed time inside that phase, and total elapsed session time.
 var _current_phase := BreathingPhase.INHALE
 var _phase_elapsed := 0.0
@@ -156,17 +161,32 @@ func _process(delta: float) -> void:
 
 	_session_elapsed += delta
 
-	if _session_elapsed >= _get_session_duration():
-		_complete_breathing_session()
-		return
+	# The configured session duration is treated as a minimum duration, not as a
+	# hard cut. Once it is reached, the app keeps running only until an exhalation
+	# finishes and the ball has naturally returned to the bottom of the gauge.
+	if not _is_finishing_session and _session_elapsed >= _get_session_duration():
+		_is_finishing_session = true
 
 	_phase_elapsed += delta
 
 	# Use a while loop instead of a single if so the cycle remains valid even after
 	# a large frame hitch, for example when the app is resumed on mobile.
 	while _phase_elapsed >= _get_current_phase_duration():
-		_phase_elapsed -= _get_current_phase_duration()
-		_current_phase = BreathingPhase.EXHALE if _current_phase == BreathingPhase.INHALE else BreathingPhase.INHALE
+		var completed_phase := _current_phase
+		var completed_phase_duration := _get_current_phase_duration()
+
+		if _is_finishing_session and completed_phase == BreathingPhase.EXHALE:
+			# Hold the exact end-of-exhale state for the first completion fade frame.
+			# This guarantees that the session ends with the ball at the bottom, even
+			# if the last frame overshoots the phase duration slightly.
+			_phase_elapsed = completed_phase_duration
+			_update_gauge()
+			_update_pause_progress_display()
+			_complete_breathing_session()
+			return
+
+		_phase_elapsed -= completed_phase_duration
+		_current_phase = BreathingPhase.EXHALE if completed_phase == BreathingPhase.INHALE else BreathingPhase.INHALE
 
 	_update_gauge()
 	_update_pause_progress_display()
@@ -1077,6 +1097,7 @@ func _restore_screen_keep_on_state() -> void:
 
 func _reset_session_progress() -> void:
 	_session_elapsed = 0.0
+	_is_finishing_session = false
 	_reset_cycle()
 
 
@@ -1125,10 +1146,18 @@ func _get_session_duration() -> float:
 	return _settings.get_session_duration_seconds()
 
 
+## Elapsed time shown to the user. During the final end-of-exhale extension,
+## the real internal timer may exceed the configured duration, but the UI stays
+## capped at the planned session duration.
+func _get_display_session_elapsed() -> float:
+	return minf(_session_elapsed, _get_session_duration())
+
+
 ## Normalized progress of the whole session, from 0 to 1.
+## This uses display elapsed time, so pause UI indicators never exceed 100%.
 func _get_session_progress() -> float:
 	var session_duration := _get_session_duration()
-	return clampf(_session_elapsed / session_duration, 0.0, 1.0) if session_duration > 0.0 else 0.0
+	return clampf(_get_display_session_elapsed() / session_duration, 0.0, 1.0) if session_duration > 0.0 else 0.0
 
 
 ## Formats elapsed time for the pause screen, for example 1:05.
@@ -1228,11 +1257,11 @@ func _update_pause_progress_display() -> void:
 	var session_progress := _get_session_progress()
 
 	_pause_elapsed_label.text = "%s / %s" % [
-		_format_minutes_seconds(_session_elapsed),
+		_format_minutes_seconds(_get_display_session_elapsed()),
 		_format_minutes_seconds(session_duration),
 	]
 
-	var fill_width := _pause_progress_bar.size.x * session_progress
+	var fill_width := clampf(_pause_progress_bar.size.x * session_progress, 0.0, _pause_progress_bar.size.x)
 	_pause_progress_fill.offset_right = fill_width
 
 
