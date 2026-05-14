@@ -1,86 +1,49 @@
 # Essential Breathing
 
-A very simple Android breathing app built with **Godot 4.6.2** and **GDScript**.
+**A calm, minimal breathing app for Android.**
 
-The app displays a vertical breathing gauge with a ball that moves upward during inhalation and downward during exhalation. The goal is to keep the experience minimal, calm, and easy to use on a phone.
+Essential Breathing helps you follow a simple breathing rhythm with a clear visual guide: a ball moves up as you inhale and down as you exhale. The app is intentionally quiet and uncluttered, so you can focus on the breath rather than on menus, badges, streaks, or distractions.
 
-## Current state
+<p align="center">
+  <img src="docs/screenshots/main-screen.jpg" alt="Essential Breathing main screen with breathing gauge" width="260" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="docs/screenshots/settings-screen.jpg" alt="Essential Breathing settings screen" width="260" />
+</p>
 
-Implemented:
+## Features
 
-- Godot **standard / non-.NET** project;
-- GDScript runtime implementation;
-- portrait mobile layout;
-- main screen focused on the breathing gauge;
-- separate settings screen;
-- vertical rounded capsule-shaped gauge;
-- large breathing ball inside the gauge;
-- eased ball movement for a smoother breathing rhythm;
-- configurable inhalation and exhalation durations;
-- configurable total session duration in whole minutes;
-- start, pause, resume, stop, and automatic completion flow;
-- pause progress display above the gauge;
-- immediate settings application and auto-save;
-- settings persistence through `user://settings.cfg`;
-- selectable visual themes;
-- neutral black-and-white settings screen for readability;
-- SVG icons for the back, stop, and play controls;
-- basic localization in English, French, and Spanish;
-- completion overlay with fade transition and localized completion message;
-- Android/mobile screen kept awake while a breathing session is active;
-- Android navigation bar kept visible, with edge-to-edge safe-area handling.
+- Simple visual breathing guide
+- Smooth ball movement inside a vertical gauge
+- Adjustable inhale duration
+- Adjustable exhale duration
+- Adjustable session duration
+- Start, pause, resume, and stop controls
+- Several visual themes
+- Clean mobile layout designed for portrait mode
+- Available in English, French, and Spanish
+- No account required
 
-The project was originally implemented in C#/.NET, but the active app logic has been migrated to GDScript. The project no longer needs Godot .NET or the .NET SDK for normal desktop testing or Android export.
+## Why this app?
 
-## Requirements
+Many breathing apps try to do everything: lessons, subscriptions, statistics, gamification, social features, and a small festival of notifications.
 
-Recommended setup:
+Essential Breathing does the opposite. It keeps the experience simple: choose a rhythm, press play, and breathe.
 
-- Godot **4.6.2 stable**, standard non-.NET version;
-- Godot Android export templates for exactly the same Godot version;
-- Android SDK;
-- Android SDK Platform-Tools;
-- Android SDK Build-Tools;
-- Android SDK Command-line Tools;
-- Android NDK;
-- CMake;
-- OpenJDK.
+## Status
 
-The project should not require:
+Essential Breathing is currently a personal Android app, tested as an APK on a real phone. It is not currently published on Google Play.
 
-- Godot .NET;
-- a C# project file;
-- .NET SDK 8 or 9;
-- MSBuild for Android export.
+## Built with
 
-## Android export notes
-
-Recommended Android export settings:
-
-```text
-Project > Export > Android > Options > Screen
-
-Immersive Mode: Off
-Edge to Edge: On
-```
-
-With this setup, the Android navigation bar remains visible while the app background can extend behind translucent system bars. The UI is adjusted using the Android safe area so buttons and sliders are not placed under system bars.
-
-Detailed Android notes are available in:
-
-```text
-docs/android_export_notes.md
-```
+- Godot 4.6.2
+- GDScript
+- Android export
 
 ## Technical documentation
 
-See:
+This README is meant to present the app in a simple, user-facing way.
 
-```text
-docs/current_implementation.md
-docs/android_export_notes.md
-```
+More technical notes are available in:
 
-`docs/current_implementation.md` describes the current architecture, scripts, UI behavior, session state, settings persistence, and Android-related runtime behavior.
-
-`docs/android_export_notes.md` documents Android-specific export requirements, export templates, system bar settings, safe-area handling, and boot splash notes.
+- [`docs/current_implementation.md`](docs/current_implementation.md)
+- [`docs/android_export_notes.md`](docs/android_export_notes.md)
